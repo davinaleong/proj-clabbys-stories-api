@@ -10,6 +10,7 @@
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:reset": "prisma migrate reset --force",
     "prisma:studio": "prisma studio",
+    "prisma:seed": "node prisma/seed/index.js",
     "db:push": "prisma db push"
   },
   "keywords": [],

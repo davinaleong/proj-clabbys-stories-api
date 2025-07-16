@@ -27,6 +27,10 @@ export const resolvers = {
     adminActivityLogs: async (_, __, { prisma }) => {
       return prisma.adminActivityLog.findMany()
     },
+
+    couples: async (_, __, { prisma }) => {
+      return prisma.user.findMany({ where: { role: "COUPLE" } })
+    },
   },
 
   Mutation: {

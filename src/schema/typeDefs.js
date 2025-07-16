@@ -74,6 +74,7 @@ export const typeDefs = `#graphql
   type Query {
     users: [User!]!
     user(id: ID!): User
+    couples: [User!]!
 
     galleries(userId: ID): [Gallery!]!
     gallery(id: ID!): Gallery
