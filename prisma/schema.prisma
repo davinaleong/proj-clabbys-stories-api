@@ -7,32 +7,54 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model Couple {
-  id         String    @id @default(uuid())
-  name       String
-  email      String    @unique
-  passphrase String
-  galleries  Gallery[]
-  createdAt  DateTime  @default(now())
+enum UserRole {
+  COUPLE
+  ADMIN
+}
+
+model User {
+  id        String             @id @default(uuid())
+  name      String
+  email     String             @unique
+  password  String // hashed for Admin login
+  role      UserRole           @default(COUPLE)
+  galleries Gallery[] // owned galleries if couple
+  adminLogs AdminActivityLog[] // ✅ back-reference for admin logs
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
 }
 
 model Gallery {
-  id         String    @id @default(uuid())
-  title      String
-  coupleId   String
-  couple     Couple    @relation(fields: [coupleId], references: [id])
-  photos     Photo[]
-  createdAt  DateTime  @default(now())
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  passphrase  String? // optional, for guest access
+  userId      String // owner (Couple)
+  owner       User     @relation(fields: [userId], references: [id])
+  photos      Photo[]
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Photo {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   title       String?
   description String?
   imageUrl    String
   thumbUrl    String?
   takenAt     DateTime?
   galleryId   String
-  gallery     Gallery  @relation(fields: [galleryId], references: [id])
-  createdAt   DateTime @default(now())
+  gallery     Gallery   @relation(fields: [galleryId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model AdminActivityLog {
+  id        String   @id @default(uuid())
+  adminId   String
+  admin     User     @relation(fields: [adminId], references: [id])
+  action    String // e.g. "UPDATED_GALLERY", "DELETED_PHOTO"
+  details   String? // optional metadata
+  createdAt DateTime @default(now())
 }

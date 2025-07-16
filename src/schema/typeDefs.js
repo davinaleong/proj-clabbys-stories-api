@@ -1,17 +1,30 @@
 export const typeDefs = `#graphql
-  type Couple {
+  enum UserRole {
+    COUPLE
+    ADMIN
+  }
+
+  type User {
     id: ID!
     name: String!
     email: String!
-    passphrase: String!
+    role: UserRole!
     galleries: [Gallery!]!
+    adminLogs: [AdminActivityLog!]!
+    createdAt: String!
+    updatedAt: String!
   }
 
   type Gallery {
     id: ID!
     title: String!
-    couple: Couple!
+    description: String
+    passphrase: String
+    owner: User!
     photos: [Photo!]!
+    isPublished: Boolean!
+    createdAt: String!
+    updatedAt: String!
   }
 
   type Photo {
@@ -22,22 +35,61 @@ export const typeDefs = `#graphql
     thumbUrl: String
     takenAt: String
     gallery: Gallery!
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  type AdminActivityLog {
+    id: ID!
+    action: String!
+    details: String
+    admin: User!
+    createdAt: String!
+  }
+
+  input UserInput {
+    name: String!
+    email: String!
+    password: String!
+    role: UserRole!
+  }
+
+  input GalleryInput {
+    title: String!
+    description: String
+    passphrase: String
+    userId: ID!
+    isPublished: Boolean
+  }
+
+  input PhotoInput {
+    galleryId: ID!
+    title: String
+    description: String
+    imageUrl: String!
+    thumbUrl: String
+    takenAt: String
   }
 
   type Query {
-    couples: [Couple!]!
-    couple(id: ID!): Couple
-    galleries(coupleId: ID!): [Gallery!]!
-    photos(galleryId: ID!): [Photo!]!
-  }
+    users: [User!]!
+    user(id: ID!): User
 
-  input CoupleInput {
-    name: String!
-    email: String!
-    passphrase: String!
+    galleries(userId: ID): [Gallery!]!
+    gallery(id: ID!): Gallery
+    galleryByPassphrase(passphrase: String!): Gallery
+
+    photos(galleryId: ID!): [Photo!]!
+
+    adminActivityLogs: [AdminActivityLog!]!
   }
 
   type Mutation {
-    createCouple(data: CoupleInput!): Couple!
+    createUser(data: UserInput!): User!
+    createGallery(data: GalleryInput!): Gallery!
+    createPhoto(data: PhotoInput!): Photo!
+
+    publishGallery(id: ID!): Gallery!
+    logAdminAction(adminId: ID!, action: String!, details: String): AdminActivityLog!
   }
 `
