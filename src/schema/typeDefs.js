@@ -47,6 +47,12 @@ export const typeDefs = `#graphql
     createdAt: String!
   }
 
+  # ✅ Response type for unlockGallery
+  type UnlockGalleryPayload {
+    gallery: Gallery!
+    token: String!
+  }
+
   input UserInput {
     name: String!
     email: String!
@@ -92,5 +98,8 @@ export const typeDefs = `#graphql
 
     publishGallery(id: ID!): Gallery!
     logAdminAction(adminId: ID!, action: String!, details: String): AdminActivityLog!
+
+    # ✅ New mutation to unlock a gallery with passphrase & return guest token
+    unlockGallery(passphrase: String!): UnlockGalleryPayload!
   }
 `

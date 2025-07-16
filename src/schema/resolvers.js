@@ -1,3 +1,5 @@
+import jwt from "jsonwebtoken"
+
 export const resolvers = {
   Query: {
     users: async (_, __, { prisma }) => {
@@ -31,6 +33,24 @@ export const resolvers = {
     couples: async (_, __, { prisma }) => {
       return prisma.user.findMany({ where: { role: "COUPLE" } })
     },
+
+    // ✅ New: Fetch gallery using guest token
+    guestGallery: async (_, { token }, { prisma }) => {
+      try {
+        const payload = jwt.verify(token, process.env.GUEST_SECRET)
+
+        const gallery = await prisma.gallery.findUnique({
+          where: { id: payload.galleryId },
+          include: { photos: true },
+        })
+
+        if (!gallery) throw new Error("Gallery not found")
+
+        return gallery
+      } catch (err) {
+        throw new Error("Invalid or expired guest token")
+      }
+    },
   },
 
   Mutation: {
@@ -53,6 +73,26 @@ export const resolvers = {
       return prisma.adminActivityLog.create({
         data: { adminId, action, details },
       })
+    },
+
+    // ✅ New: Unlock gallery with passphrase and issue guest token
+    unlockGallery: async (_, { passphrase }, { prisma }) => {
+      const gallery = await prisma.gallery.findFirst({
+        where: { passphrase },
+      })
+
+      if (!gallery) {
+        throw new Error("Invalid passphrase")
+      }
+
+      // Issue a temporary JWT for guest access
+      const token = jwt.sign(
+        { galleryId: gallery.id },
+        process.env.GUEST_SECRET,
+        { expiresIn: "2h" } // expires in 2 hours
+      )
+
+      return { gallery, token }
     },
   },
 
