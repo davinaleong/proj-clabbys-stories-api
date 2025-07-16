@@ -1,30 +1,73 @@
-export const typeDefs = `#graphql
-  enum UserRole {
-    COUPLE
-    ADMIN
+import { gql } from "apollo-server-express"
+
+export const typeDefs = gql`
+  # ==============================
+  # ✅ QUERIES
+  # ==============================
+  type Query {
+    # Users
+    users: [User!]!
+    user(id: ID!): User
+
+    # Galleries
+    galleries(userId: ID): [Gallery!]!
+    gallery(id: ID!): Gallery
+    galleryByPassphrase(passphrase: String!): Gallery
+    guestGallery(token: String!): Gallery
+
+    # Photos
+    photos(galleryId: ID!): [Photo!]!
+
+    # Admin
+    adminActivityLogs: [AdminActivityLog!]!
+    couples: [User!]!
   }
 
-  type User {
-    id: ID!
-    name: String!
-    email: String!
-    role: UserRole!
-    galleries: [Gallery!]!
-    adminLogs: [AdminActivityLog!]!
-    createdAt: String!
-    updatedAt: String!
+  # ==============================
+  # ✅ MUTATIONS
+  # ==============================
+  type Mutation {
+    # Users
+    createUser(data: CreateUserInput!): User!
+
+    # Galleries
+    createGallery(data: CreateGalleryInput!): Gallery!
+    publishGallery(id: ID!): Gallery!
+    unlockGallery(passphrase: String!): UnlockGalleryResponse!
+
+    # Photos
+    createPhoto(data: CreatePhotoInput!): Photo!
+
+    # Admin Logs
+    logAdminAction(
+      adminId: ID!
+      action: String!
+      details: String
+    ): AdminActivityLog!
   }
 
+  # ==============================
+  # ✅ CUSTOM RETURN TYPES
+  # ==============================
+  type UnlockGalleryResponse {
+    gallery: Gallery!
+    token: String!
+  }
+
+  # ==============================
+  # ✅ CORE TYPES
+  # ==============================
   type Gallery {
     id: ID!
-    title: String!
+    title: String
     description: String
     passphrase: String
-    owner: User!
-    photos: [Photo!]!
-    isPublished: Boolean!
-    createdAt: String!
-    updatedAt: String!
+    isPublished: Boolean
+    userId: String
+    owner: User
+    photos: [Photo!]
+    createdAt: String
+    updatedAt: String
   }
 
   type Photo {
@@ -33,73 +76,54 @@ export const typeDefs = `#graphql
     description: String
     imageUrl: String!
     thumbUrl: String
+    caption: String
     takenAt: String
-    gallery: Gallery!
-    createdAt: String!
-    updatedAt: String!
+    galleryId: String!
+    gallery: Gallery
+    createdAt: String
+    updatedAt: String
+  }
+
+  type User {
+    id: ID!
+    email: String!
+    role: String!
+    galleries: [Gallery!]
+    adminLogs: [AdminActivityLog!]
   }
 
   type AdminActivityLog {
     id: ID!
+    adminId: String!
     action: String!
     details: String
-    admin: User!
     createdAt: String!
+    admin: User
   }
 
-  # ✅ Response type for unlockGallery
-  type UnlockGalleryPayload {
-    gallery: Gallery!
-    token: String!
-  }
-
-  input UserInput {
-    name: String!
+  # ==============================
+  # ✅ INPUT TYPES
+  # ==============================
+  input CreateUserInput {
     email: String!
     password: String!
-    role: UserRole!
+    role: String! # e.g. ADMIN, COUPLE, GUEST
   }
 
-  input GalleryInput {
+  input CreateGalleryInput {
     title: String!
     description: String
     passphrase: String
-    userId: ID!
-    isPublished: Boolean
+    userId: String!
   }
 
-  input PhotoInput {
-    galleryId: ID!
+  input CreatePhotoInput {
     title: String
     description: String
     imageUrl: String!
     thumbUrl: String
+    caption: String
     takenAt: String
-  }
-
-  type Query {
-    users: [User!]!
-    user(id: ID!): User
-    couples: [User!]!
-
-    galleries(userId: ID): [Gallery!]!
-    gallery(id: ID!): Gallery
-    galleryByPassphrase(passphrase: String!): Gallery
-
-    photos(galleryId: ID!): [Photo!]!
-
-    adminActivityLogs: [AdminActivityLog!]!
-  }
-
-  type Mutation {
-    createUser(data: UserInput!): User!
-    createGallery(data: GalleryInput!): Gallery!
-    createPhoto(data: PhotoInput!): Photo!
-
-    publishGallery(id: ID!): Gallery!
-    logAdminAction(adminId: ID!, action: String!, details: String): AdminActivityLog!
-
-    # ✅ New mutation to unlock a gallery with passphrase & return guest token
-    unlockGallery(passphrase: String!): UnlockGalleryPayload!
+    galleryId: String!
   }
 `
