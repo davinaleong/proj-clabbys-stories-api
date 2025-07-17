@@ -1,7 +1,7 @@
 import express from "express"
 import { ApolloServer } from "apollo-server-express"
 import { PrismaClient } from "@prisma/client"
-import dotenv from "dotenv"
+import { env } from "./config/env.js"
 import uploadRoute from "./routes/upload.js" // REST upload route
 import { typeDefs } from "./schema/typeDefs.js"
 import { resolvers } from "./schema/resolvers.js"
@@ -34,7 +34,7 @@ async function startApolloServer() {
   })
 
   // ✅ Start Express server
-  const PORT = process.env.PORT || 4000
+  const PORT = env.PORT || 4000
   app.listen(PORT, () => {
     console.log(`✅ REST API ready at http://localhost:${PORT}`)
     console.log(

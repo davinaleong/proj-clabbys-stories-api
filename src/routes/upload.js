@@ -1,7 +1,8 @@
 import express from "express"
 import multer from "multer"
 import cloudinary from "../config/cloudinary.js"
-import streamifier from "streamifier" // ✅ needed for buffer streaming
+import streamifier from "streamifier"
+import { env } from "../config/env.js" // ✅ import env.js
 
 const router = express.Router()
 
@@ -14,7 +15,7 @@ const streamUpload = (buffer) => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
-        folder: process.env.CLOUDINARY_UPLOAD_FOLDER || "uploads",
+        folder: env.CLOUDINARY_UPLOAD_FOLDER, // ✅ use env.js
         resource_type: "auto",
       },
       (error, result) => {
@@ -34,19 +35,10 @@ router.post("/", upload.single("file"), async (req, res) => {
 
     // ✅ Properly stream file buffer to Cloudinary
     const result = await streamUpload(req.file.buffer)
-
-    return res.json({
-      url: result.secure_url,
-      public_id: result.public_id,
-      resource_type: result.resource_type,
-      format: result.format,
-      bytes: result.bytes,
-      width: result.width,
-      height: result.height,
-    })
-  } catch (err) {
-    console.error("Cloudinary upload failed:", err)
-    return res.status(500).json({ error: err.message || "Upload failed" })
+    return res.json({ success: true, result })
+  } catch (error) {
+    console.error("Upload failed:", error)
+    return res.status(500).json({ error: "Upload failed" })
   }
 })
 

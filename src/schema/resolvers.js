@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken"
+import { env } from "./config/env.js"
 
 export const resolvers = {
   Query: {
@@ -37,7 +38,7 @@ export const resolvers = {
     // ✅ New: Fetch gallery using guest token
     guestGallery: async (_, { token }, { prisma }) => {
       try {
-        const payload = jwt.verify(token, process.env.GUEST_SECRET)
+        const payload = jwt.verify(token, env.GUEST_SECRET)
 
         const gallery = await prisma.gallery.findUnique({
           where: { id: payload.galleryId },
@@ -88,7 +89,7 @@ export const resolvers = {
       // Issue a temporary JWT for guest access
       const token = jwt.sign(
         { galleryId: gallery.id },
-        process.env.GUEST_SECRET,
+        env.GUEST_SECRET,
         { expiresIn: "2h" } // expires in 2 hours
       )
 
