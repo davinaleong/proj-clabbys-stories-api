@@ -12,7 +12,6 @@ export const typeDefs = gql`
     # Galleries
     galleries(userId: ID): [Gallery!]!
     gallery(id: ID!): Gallery
-    galleryByPassphrase(passphrase: String!): Gallery
     guestGallery(token: String!): Gallery
 
     # Photos
@@ -33,7 +32,10 @@ export const typeDefs = gql`
     # Galleries
     createGallery(data: CreateGalleryInput!): Gallery!
     publishGallery(id: ID!): Gallery!
-    unlockGallery(passphrase: String!): UnlockGalleryResponse!
+
+    # ✅ Secure Passphrase Auth
+    setGalleryPassphrase(id: ID!, passphrase: String!): Boolean!
+    loginGallery(id: ID!, passphrase: String!): AuthPayload!
 
     # Photos
     createPhoto(data: CreatePhotoInput!): Photo!
@@ -47,11 +49,11 @@ export const typeDefs = gql`
   }
 
   # ==============================
-  # ✅ CUSTOM RETURN TYPES
+  # ✅ SECURE LOGIN RETURN
   # ==============================
-  type UnlockGalleryResponse {
-    gallery: Gallery!
+  type AuthPayload {
     token: String!
+    gallery: Gallery!
   }
 
   # ==============================
@@ -61,7 +63,6 @@ export const typeDefs = gql`
     id: ID!
     title: String
     description: String
-    passphrase: String
     isPublished: Boolean
     userId: String
     owner: User
@@ -107,13 +108,12 @@ export const typeDefs = gql`
   input CreateUserInput {
     email: String!
     password: String!
-    role: String! # e.g. ADMIN, COUPLE, GUEST
+    role: String! # ADMIN, COUPLE
   }
 
   input CreateGalleryInput {
     title: String!
     description: String
-    passphrase: String
     userId: String!
   }
 

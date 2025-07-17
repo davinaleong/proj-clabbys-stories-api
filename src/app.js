@@ -6,7 +6,6 @@ import uploadRoute from "./routes/upload.js" // REST upload route
 import { typeDefs } from "./schema/typeDefs.js"
 import { resolvers } from "./schema/resolvers.js"
 
-dotenv.config()
 const prisma = new PrismaClient()
 const app = express()
 

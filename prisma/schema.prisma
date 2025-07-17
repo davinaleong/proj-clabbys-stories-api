@@ -28,7 +28,7 @@ model Gallery {
   id          String   @id @default(uuid())
   title       String
   description String?
-  passphrase  String? // optional, for guest access
+  passphraseHash String? // optional, for guest access
   userId      String // owner (Couple)
   owner       User     @relation(fields: [userId], references: [id])
   photos      Photo[]
