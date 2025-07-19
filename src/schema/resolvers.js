@@ -1,90 +1,137 @@
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
+import { randomBytes } from "crypto"
 import { env } from "./../config/env.js"
 
 export const resolvers = {
   Query: {
+    // ==============================
+    // ✅ USER QUERIES (couples only)
+    // ==============================
     users: async (_, __, { prisma }) => prisma.user.findMany(),
 
     user: async (_, { id }, { prisma }) =>
       prisma.user.findUnique({ where: { id } }),
 
+    // ==============================
+    // ✅ GALLERY QUERIES
+    // ==============================
     galleries: async (_, { userId }, { prisma }) => {
       if (userId) {
         return prisma.gallery.findMany({ where: { userId } })
       }
-      return prisma.gallery.findMany() // all galleries for admin
+      return prisma.gallery.findMany()
     },
 
     gallery: async (_, { id }, { prisma }) =>
       prisma.gallery.findUnique({ where: { id } }),
 
-    // ❌ REMOVED insecure plaintext search
-    // galleryByPassphrase: async (_, { passphrase }, { prisma }) => { ... }
+    // ✅ Cursor-based Pagination for Galleries
+    galleriesPaginated: async (_, { userId, after, first }, { prisma }) => {
+      const take = first ?? 10
 
+      const whereClause = userId ? { userId } : {}
+
+      const galleries = await prisma.gallery.findMany({
+        where: whereClause,
+        take: take + 1, // fetch 1 extra to check if next page exists
+        ...(after && {
+          cursor: { id: after },
+          skip: 1, // skip the cursor itself
+        }),
+        orderBy: { createdAt: "desc" },
+      })
+
+      const hasNextPage = galleries.length > take
+      const edges = galleries.slice(0, take).map((g) => ({
+        cursor: g.id,
+        node: g,
+      }))
+
+      return {
+        edges,
+        pageInfo: {
+          endCursor: edges.length ? edges[edges.length - 1].cursor : null,
+          hasNextPage,
+        },
+      }
+    },
+
+    // ==============================
+    // ✅ PHOTO QUERIES
+    // ==============================
     photos: async (_, { galleryId }, { prisma }) =>
       prisma.photo.findMany({ where: { galleryId } }),
 
-    adminActivityLogs: async (_, __, { prisma }) =>
-      prisma.adminActivityLog.findMany(),
+    // ✅ Cursor-based Pagination for Photos
+    photosPaginated: async (_, { galleryId, after, first }, { prisma }) => {
+      const take = first ?? 10
 
-    couples: async (_, __, { prisma }) =>
-      prisma.user.findMany({ where: { role: "COUPLE" } }),
+      const photos = await prisma.photo.findMany({
+        where: { galleryId },
+        take: take + 1,
+        ...(after && {
+          cursor: { id: after },
+          skip: 1,
+        }),
+        orderBy: { createdAt: "desc" },
+      })
 
-    // ✅ Still allow guest token-based gallery access
-    guestGallery: async (_, { token }, { prisma }) => {
-      try {
-        const payload = jwt.verify(token, env.GUEST_SECRET)
-        const gallery = await prisma.gallery.findUnique({
-          where: { id: payload.galleryId },
-          include: { photos: true },
-        })
-        if (!gallery) throw new Error("Gallery not found")
-        return gallery
-      } catch (err) {
-        throw new Error("Invalid or expired guest token")
+      const hasNextPage = photos.length > take
+      const edges = photos.slice(0, take).map((p) => ({
+        cursor: p.id,
+        node: p,
+      }))
+
+      return {
+        edges,
+        pageInfo: {
+          endCursor: edges.length ? edges[edges.length - 1].cursor : null,
+          hasNextPage,
+        },
       }
     },
+
+    // ==============================
+    // ✅ APP SETTINGS QUERIES
+    // ==============================
+    appSettings: async (_, __, { prisma }) => prisma.appSetting.findMany(),
+
+    appSetting: async (_, { id }, { prisma }) =>
+      prisma.appSetting.findUnique({ where: { id } }),
   },
 
   Mutation: {
+    // ==============================
+    // ✅ USER MUTATIONS (couples only)
+    // ==============================
     createUser: async (_, { data }, { prisma }) => prisma.user.create({ data }),
 
-    createGallery: async (_, { data }, { prisma }) =>
-      prisma.gallery.create({ data }),
+    // ==============================
+    // ✅ GALLERY MUTATIONS
+    // ==============================
+    createGallery: async (_, { data }, { prisma }) => {
+      // ✅ Generate a unique magic link token
+      const magicLinkToken = randomBytes(16).toString("hex")
 
-    createPhoto: async (_, { data }, { prisma }) =>
-      prisma.photo.create({ data }),
+      // ✅ Generate a random 4-digit PIN
+      const plainPIN = Math.floor(1000 + Math.random() * 9000).toString()
+      const pinHash = await bcrypt.hash(plainPIN, 10)
 
-    createPhotos: async (_, { data }, { prisma }) => {
-      const { galleryId, photos } = data
-
-      // ✅ Ensure the gallery exists before inserting
-      const gallery = await prisma.gallery.findUnique({
-        where: { id: galleryId },
-      })
-      if (!gallery) throw new Error("Gallery not found")
-
-      // ✅ Add galleryId to each photo automatically
-      const preparedPhotos = photos.map((photo) => ({
-        ...photo,
-        galleryId,
-      }))
-
-      // ✅ Bulk create
-      const createdPhotos = await prisma.photo.createMany({
-        data: preparedPhotos,
-        skipDuplicates: true, // prevents accidental duplicate insert
-      })
-
-      // `createMany` doesn’t return the created records, only count,
-      // so we fetch them explicitly:
-      return prisma.photo.findMany({
-        where: {
-          galleryId,
+      // ✅ Create gallery with magic link + hashed PIN
+      const gallery = await prisma.gallery.create({
+        data: {
+          ...data,
+          magicLinkToken,
+          pinHash,
         },
-        orderBy: { createdAt: "desc" },
       })
+
+      // ✅ Return the gallery + plain PIN (send via email)
+      return {
+        ...gallery,
+        plainPIN, // only returned once after creation
+      }
     },
 
     publishGallery: async (_, { id }, { prisma }) =>
@@ -93,51 +140,94 @@ export const resolvers = {
         data: { isPublished: true },
       }),
 
-    logAdminAction: async (_, { adminId, action, details }, { prisma }) =>
-      prisma.adminActivityLog.create({
-        data: { adminId, action, details },
-      }),
-
-    // ❌ REMOVED insecure unlockGallery with plaintext passphrase
-
-    // ✅ 1. Set a hashed passphrase (only allowed if none exists yet)
-    setGalleryPassphrase: async (_, { id, passphrase }, { prisma }) => {
-      const gallery = await prisma.gallery.findUnique({ where: { id } })
-      if (!gallery) throw new Error("Gallery not found")
-      if (gallery.passphraseHash) throw new Error("Passphrase already set")
-
-      const hash = await bcrypt.hash(passphrase, 10)
-      await prisma.gallery.update({
-        where: { id },
-        data: { passphraseHash: hash },
+    // ==============================
+    // ✅ MAGIC LINK + PIN AUTH
+    // ==============================
+    requestEditorAccess: async (_, { token, pin }, { prisma }) => {
+      // ✅ Find gallery by magicLinkToken
+      const gallery = await prisma.gallery.findUnique({
+        where: { magicLinkToken: token },
       })
 
-      return true
+      if (!gallery) throw new Error("Invalid magic link")
+
+      // ✅ Verify PIN against stored hash
+      const valid = await bcrypt.compare(pin, gallery.pinHash)
+      if (!valid) throw new Error("Invalid PIN")
+
+      // ✅ Issue short-lived JWT (e.g., valid for 24 hours)
+      const authToken = jwt.sign({ galleryId: gallery.id }, env.JWT_SECRET, {
+        expiresIn: "24h",
+      })
+
+      return { token: authToken, gallery }
     },
 
-    // ✅ 2. Login with passphrase → return JWT for couple editing
-    loginGallery: async (_, { id, passphrase }, { prisma }) => {
-      const gallery = await prisma.gallery.findUnique({ where: { id } })
-      if (!gallery || !gallery.passphraseHash)
-        throw new Error("Gallery not initialized for passphrase login")
+    // ==============================
+    // ✅ PHOTO MUTATIONS
+    // ==============================
+    createPhoto: async (_, { data }, { prisma }) =>
+      prisma.photo.create({ data }),
 
-      const valid = await bcrypt.compare(passphrase, gallery.passphraseHash)
-      if (!valid) throw new Error("Invalid passphrase")
+    createPhotos: async (_, { data }, { prisma }) => {
+      const { galleryId, photos } = data
 
-      const token = jwt.sign({ galleryId: gallery.id }, env.JWT_SECRET, {
-        expiresIn: "7d",
+      // ✅ Ensure gallery exists
+      const gallery = await prisma.gallery.findUnique({
+        where: { id: galleryId },
+      })
+      if (!gallery) throw new Error("Gallery not found")
+
+      // ✅ Attach galleryId to each photo
+      const preparedPhotos = photos.map((photo) => ({
+        ...photo,
+        galleryId,
+      }))
+
+      await prisma.photo.createMany({
+        data: preparedPhotos,
+        skipDuplicates: true,
       })
 
-      return { token, gallery }
+      return prisma.photo.findMany({
+        where: { galleryId },
+        orderBy: { createdAt: "desc" },
+      })
+    },
+
+    // ==============================
+    // ✅ APP SETTINGS MUTATION
+    // ==============================
+    updateAppSetting: async (_, { id, data }, { prisma }) => {
+      if (
+        !data.applicationName &&
+        !data.lightboxMode &&
+        !data.defaultSortOrder
+      ) {
+        throw new Error("No update fields provided")
+      }
+
+      return prisma.appSetting.update({
+        where: { id },
+        data: {
+          ...(data.applicationName && {
+            applicationName: data.applicationName,
+          }),
+          ...(data.lightboxMode && { lightboxMode: data.lightboxMode }),
+          ...(data.defaultSortOrder && {
+            defaultSortOrder: data.defaultSortOrder,
+          }),
+        },
+      })
     },
   },
 
-  // === Nested Resolvers ===
+  // ==============================
+  // ✅ NESTED RESOLVERS
+  // ==============================
   User: {
     galleries: (parent, _, { prisma }) =>
       prisma.gallery.findMany({ where: { userId: parent.id } }),
-    adminLogs: (parent, _, { prisma }) =>
-      prisma.adminActivityLog.findMany({ where: { adminId: parent.id } }),
   },
 
   Gallery: {
@@ -150,10 +240,5 @@ export const resolvers = {
   Photo: {
     gallery: (parent, _, { prisma }) =>
       prisma.gallery.findUnique({ where: { id: parent.galleryId } }),
-  },
-
-  AdminActivityLog: {
-    admin: (parent, _, { prisma }) =>
-      prisma.user.findUnique({ where: { id: parent.adminId } }),
   },
 }

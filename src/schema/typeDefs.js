@@ -2,51 +2,102 @@ import { gql } from "apollo-server-express"
 
 export const typeDefs = gql`
   # ==============================
+  # ✅ ENUMS
+  # ==============================
+  enum LightboxMode {
+    BLACK
+    BLURRED
+  }
+
+  enum SortOrder {
+    ALPHABETICAL_ASC
+    ALPHABETICAL_DESC
+    NEWEST
+    OLDEST
+  }
+
+  # ==============================
+  # ✅ PAGINATION TYPES
+  # ==============================
+  type PageInfo {
+    endCursor: String
+    hasNextPage: Boolean!
+  }
+
+  type GalleryEdge {
+    cursor: String!
+    node: Gallery!
+  }
+
+  type GalleryConnection {
+    edges: [GalleryEdge!]!
+    pageInfo: PageInfo!
+  }
+
+  type PhotoEdge {
+    cursor: String!
+    node: Photo!
+  }
+
+  type PhotoConnection {
+    edges: [PhotoEdge!]!
+    pageInfo: PageInfo!
+  }
+
+  # ==============================
   # ✅ QUERIES
   # ==============================
   type Query {
-    # Users
+    # Users (couples only)
     users: [User!]!
     user(id: ID!): User
 
     # Galleries
     galleries(userId: ID): [Gallery!]!
     gallery(id: ID!): Gallery
-    guestGallery(token: String!): Gallery
+
+    # ✅ Cursor-based Pagination
+    galleriesPaginated(
+      userId: ID
+      after: String
+      first: Int = 10
+    ): GalleryConnection!
 
     # Photos
     photos(galleryId: ID!): [Photo!]!
 
-    # Admin
-    adminActivityLogs: [AdminActivityLog!]!
-    couples: [User!]!
+    # ✅ Cursor-based Pagination for Photos
+    photosPaginated(
+      galleryId: ID!
+      after: String
+      first: Int = 10
+    ): PhotoConnection!
+
+    # App Settings
+    appSettings: [AppSetting!]!
+    appSetting(id: ID!): AppSetting
   }
 
   # ==============================
   # ✅ MUTATIONS
   # ==============================
   type Mutation {
-    # Users
+    # Users (for couples)
     createUser(data: CreateUserInput!): User!
 
     # Galleries
     createGallery(data: CreateGalleryInput!): Gallery!
     publishGallery(id: ID!): Gallery!
 
-    # ✅ Secure Passphrase Auth
-    setGalleryPassphrase(id: ID!, passphrase: String!): Boolean!
-    loginGallery(id: ID!, passphrase: String!): AuthPayload!
+    # ✅ Magic Link + PIN Auth
+    requestEditorAccess(token: String!, pin: String!): AuthPayload!
 
     # Photos
     createPhoto(data: CreatePhotoInput!): Photo!
     createPhotos(data: CreatePhotoBatchInput!): [Photo!]!
 
-    # Admin Logs
-    logAdminAction(
-      adminId: ID!
-      action: String!
-      details: String
-    ): AdminActivityLog!
+    # App Settings
+    updateAppSetting(id: ID!, data: UpdateAppSettingInput!): AppSetting!
   }
 
   # ==============================
@@ -62,10 +113,11 @@ export const typeDefs = gql`
   # ==============================
   type Gallery {
     id: ID!
-    title: String
+    title: String!
     description: String
     isPublished: Boolean
-    userId: String
+    magicLinkToken: String
+    userId: String!
     owner: User
     photos: [Photo!]
     createdAt: String
@@ -86,35 +138,31 @@ export const typeDefs = gql`
     updatedAt: String
   }
 
-  input CreatePhotoBatchInput {
-    galleryId: String!
-    photos: [CreatePhotoInput!]!
-  }
-
   type User {
     id: ID!
+    name: String!
     email: String!
-    role: String!
     galleries: [Gallery!]
-    adminLogs: [AdminActivityLog!]
   }
 
-  type AdminActivityLog {
+  # ==============================
+  # ✅ APP SETTINGS TYPE
+  # ==============================
+  type AppSetting {
     id: ID!
-    adminId: String!
-    action: String!
-    details: String
+    applicationName: String!
+    lightboxMode: LightboxMode!
+    defaultSortOrder: SortOrder!
     createdAt: String!
-    admin: User
+    updatedAt: String!
   }
 
   # ==============================
   # ✅ INPUT TYPES
   # ==============================
   input CreateUserInput {
+    name: String!
     email: String!
-    password: String!
-    role: String! # ADMIN, COUPLE
   }
 
   input CreateGalleryInput {
@@ -131,5 +179,16 @@ export const typeDefs = gql`
     caption: String
     takenAt: String
     galleryId: String!
+  }
+
+  input CreatePhotoBatchInput {
+    galleryId: String!
+    photos: [CreatePhotoInput!]!
+  }
+
+  input UpdateAppSettingInput {
+    applicationName: String
+    lightboxMode: LightboxMode
+    defaultSortOrder: SortOrder
   }
 `

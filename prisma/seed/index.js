@@ -3,7 +3,6 @@ import { PrismaClient } from "@prisma/client"
 import { seedUsers } from "./seedUsers.js"
 import { seedGallery } from "./seedGallery.js"
 import { seedPhotos } from "./seedPhotos.js"
-import { seedAdminLogs } from "./seedAdminLogs.js"
 
 const prisma = new PrismaClient()
 
@@ -18,9 +17,6 @@ async function main() {
 
   // 3️⃣ Seed Cloudinary Photos into the Gallery
   await seedPhotos(prisma, gallery.id)
-
-  // 4️⃣ Create an Admin Log Entry
-  await seedAdminLogs(prisma, admin.id)
 
   console.log("✅ All seeding done!")
 }

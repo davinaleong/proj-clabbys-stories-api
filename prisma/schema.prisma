@@ -1,3 +1,6 @@
+// ==============================
+// ✅ DATABASE CONFIG
+// ==============================
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -7,34 +10,48 @@ generator client {
   provider = "prisma-client-js"
 }
 
-enum UserRole {
-  COUPLE
-  ADMIN
+// ==============================
+// ✅ ENUMS
+// ==============================
+enum LightboxMode {
+  BLACK
+  BLURRED
 }
 
+enum SortOrder {
+  ALPHABETICAL_ASC   // Alphabetical Order (A → Z)
+  ALPHABETICAL_DESC  // Reverse Alphabetical (Z → A)
+  NEWEST             // Newest First
+  OLDEST             // Oldest First
+}
+
+// ==============================
+// ✅ MODELS
+// ==============================
 model User {
-  id        String             @id @default(uuid())
+  id        String    @id @default(uuid())
   name      String
-  email     String             @unique
-  password  String // hashed for Admin login
-  role      UserRole           @default(COUPLE)
-  galleries Gallery[] // owned galleries if couple
-  adminLogs AdminActivityLog[] // ✅ back-reference for admin logs
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
+  email     String    @unique
+  galleries Gallery[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 model Gallery {
-  id          String   @id @default(uuid())
-  title       String
-  description String?
-  passphraseHash String? // optional, for guest access
-  userId      String // owner (Couple)
-  owner       User     @relation(fields: [userId], references: [id])
-  photos      Photo[]
-  isPublished Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String    @id @default(uuid())
+  title          String
+  description    String?
+  userId         String
+  owner          User      @relation(fields: [userId], references: [id])
+  photos         Photo[]
+  isPublished    Boolean   @default(false)
+
+  // ✅ Magic link authentication
+  magicLinkToken String?   @unique // unique token sent via email for editor access
+  pinHash        String?   // hashed PIN required to unlock editing
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 model Photo {
@@ -50,11 +67,15 @@ model Photo {
   updatedAt   DateTime  @updatedAt
 }
 
-model AdminActivityLog {
-  id        String   @id @default(uuid())
-  adminId   String
-  admin     User     @relation(fields: [adminId], references: [id])
-  action    String // e.g. "UPDATED_GALLERY", "DELETED_PHOTO"
-  details   String? // optional metadata
-  createdAt DateTime @default(now())
+// ==============================
+// ✅ APP SETTINGS MODEL
+// ==============================
+model AppSetting {
+  id                String       @id @default(uuid())
+  applicationName   String       // App Name, e.g. "Clabby's Stories"
+  lightboxMode      LightboxMode @default(BLACK)
+  defaultSortOrder  SortOrder    @default(NEWEST)
+
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 }
