@@ -39,6 +39,7 @@ export const typeDefs = gql`
 
     # Photos
     createPhoto(data: CreatePhotoInput!): Photo!
+    createPhotos(data: CreatePhotoBatchInput!): [Photo!]!
 
     # Admin Logs
     logAdminAction(
@@ -83,6 +84,11 @@ export const typeDefs = gql`
     gallery: Gallery
     createdAt: String
     updatedAt: String
+  }
+
+  input CreatePhotoBatchInput {
+    galleryId: String!
+    photos: [CreatePhotoInput!]!
   }
 
   type User {

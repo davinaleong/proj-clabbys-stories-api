@@ -56,6 +56,37 @@ export const resolvers = {
     createPhoto: async (_, { data }, { prisma }) =>
       prisma.photo.create({ data }),
 
+    createPhotos: async (_, { data }, { prisma }) => {
+      const { galleryId, photos } = data
+
+      // ✅ Ensure the gallery exists before inserting
+      const gallery = await prisma.gallery.findUnique({
+        where: { id: galleryId },
+      })
+      if (!gallery) throw new Error("Gallery not found")
+
+      // ✅ Add galleryId to each photo automatically
+      const preparedPhotos = photos.map((photo) => ({
+        ...photo,
+        galleryId,
+      }))
+
+      // ✅ Bulk create
+      const createdPhotos = await prisma.photo.createMany({
+        data: preparedPhotos,
+        skipDuplicates: true, // prevents accidental duplicate insert
+      })
+
+      // `createMany` doesn’t return the created records, only count,
+      // so we fetch them explicitly:
+      return prisma.photo.findMany({
+        where: {
+          galleryId,
+        },
+        orderBy: { createdAt: "desc" },
+      })
+    },
+
     publishGallery: async (_, { id }, { prisma }) =>
       prisma.gallery.update({
         where: { id },
