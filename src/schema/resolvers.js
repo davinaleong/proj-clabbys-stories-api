@@ -1,6 +1,5 @@
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
-import { randomBytes } from "crypto"
 import { env } from "./../config/env.js"
 
 export const resolvers = {
@@ -34,10 +33,10 @@ export const resolvers = {
 
       const galleries = await prisma.gallery.findMany({
         where: whereClause,
-        take: take + 1, // fetch 1 extra to check if next page exists
+        take: take + 1,
         ...(after && {
           cursor: { id: after },
-          skip: 1, // skip the cursor itself
+          skip: 1,
         }),
         orderBy: { createdAt: "desc" },
       })
@@ -110,29 +109,8 @@ export const resolvers = {
     // ==============================
     // ✅ GALLERY MUTATIONS
     // ==============================
-    createGallery: async (_, { data }, { prisma }) => {
-      // ✅ Generate a unique magic link token
-      const magicLinkToken = randomBytes(16).toString("hex")
-
-      // ✅ Generate a random 4-digit PIN
-      const plainPIN = Math.floor(1000 + Math.random() * 9000).toString()
-      const pinHash = await bcrypt.hash(plainPIN, 10)
-
-      // ✅ Create gallery with magic link + hashed PIN
-      const gallery = await prisma.gallery.create({
-        data: {
-          ...data,
-          magicLinkToken,
-          pinHash,
-        },
-      })
-
-      // ✅ Return the gallery + plain PIN (send via email)
-      return {
-        ...gallery,
-        plainPIN, // only returned once after creation
-      }
-    },
+    createGallery: async (_, { data }, { prisma }) =>
+      prisma.gallery.create({ data }),
 
     publishGallery: async (_, { id }, { prisma }) =>
       prisma.gallery.update({
@@ -140,27 +118,35 @@ export const resolvers = {
         data: { isPublished: true },
       }),
 
-    // ==============================
-    // ✅ MAGIC LINK + PIN AUTH
-    // ==============================
-    requestEditorAccess: async (_, { token, pin }, { prisma }) => {
-      // ✅ Find gallery by magicLinkToken
-      const gallery = await prisma.gallery.findUnique({
-        where: { magicLinkToken: token },
+    // ✅ Set a hashed passphrase (only if not already set)
+    setGalleryPassphrase: async (_, { id, passphrase }, { prisma }) => {
+      const gallery = await prisma.gallery.findUnique({ where: { id } })
+      if (!gallery) throw new Error("Gallery not found")
+      if (gallery.passphraseHash) throw new Error("Passphrase already set")
+
+      const hash = await bcrypt.hash(passphrase, 10)
+      await prisma.gallery.update({
+        where: { id },
+        data: { passphraseHash: hash },
       })
 
-      if (!gallery) throw new Error("Invalid magic link")
+      return true
+    },
 
-      // ✅ Verify PIN against stored hash
-      const valid = await bcrypt.compare(pin, gallery.pinHash)
-      if (!valid) throw new Error("Invalid PIN")
+    // ✅ Login with passphrase → return JWT
+    loginGallery: async (_, { id, passphrase }, { prisma }) => {
+      const gallery = await prisma.gallery.findUnique({ where: { id } })
+      if (!gallery || !gallery.passphraseHash)
+        throw new Error("Gallery not initialized for passphrase login")
 
-      // ✅ Issue short-lived JWT (e.g., valid for 24 hours)
-      const authToken = jwt.sign({ galleryId: gallery.id }, env.JWT_SECRET, {
-        expiresIn: "24h",
+      const valid = await bcrypt.compare(passphrase, gallery.passphraseHash)
+      if (!valid) throw new Error("Invalid passphrase")
+
+      const token = jwt.sign({ galleryId: gallery.id }, env.JWT_SECRET, {
+        expiresIn: "7d",
       })
 
-      return { token: authToken, gallery }
+      return { token, gallery }
     },
 
     // ==============================
@@ -178,7 +164,6 @@ export const resolvers = {
       })
       if (!gallery) throw new Error("Gallery not found")
 
-      // ✅ Attach galleryId to each photo
       const preparedPhotos = photos.map((photo) => ({
         ...photo,
         galleryId,

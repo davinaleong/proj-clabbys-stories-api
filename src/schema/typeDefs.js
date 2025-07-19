@@ -89,8 +89,9 @@ export const typeDefs = gql`
     createGallery(data: CreateGalleryInput!): Gallery!
     publishGallery(id: ID!): Gallery!
 
-    # ✅ Magic Link + PIN Auth
-    requestEditorAccess(token: String!, pin: String!): AuthPayload!
+    # ✅ Passphrase Authentication
+    setGalleryPassphrase(id: ID!, passphrase: String!): Boolean!
+    loginGallery(id: ID!, passphrase: String!): AuthPayload!
 
     # Photos
     createPhoto(data: CreatePhotoInput!): Photo!
@@ -116,7 +117,7 @@ export const typeDefs = gql`
     title: String!
     description: String
     isPublished: Boolean
-    magicLinkToken: String
+    passphraseHash: String # stored hashed passphrase (not exposed normally)
     userId: String!
     owner: User
     photos: [Photo!]

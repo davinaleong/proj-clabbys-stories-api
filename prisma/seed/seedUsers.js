@@ -1,8 +1,6 @@
-// prisma/seed/seedUsers.js
 export async function seedUsers(prisma) {
   console.log("👥 Seeding users (couples)...")
 
-  // Check if any couple exists
   const existingCouple = await prisma.user.findFirst({
     where: { email: "alicebob@example.com" },
   })
@@ -15,7 +13,9 @@ export async function seedUsers(prisma) {
       },
     })
     console.log(`✅ Couple created: ${couple.email}`)
+    return couple // ✅ return newly created couple
   } else {
     console.log("ℹ️ Sample couple already exists")
+    return existingCouple // ✅ return existing couple
   }
 }

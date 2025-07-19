@@ -9,8 +9,8 @@ const prisma = new PrismaClient()
 async function main() {
   console.log("🚀 Starting full seed process...")
 
-  // 1️⃣ Create Users (Admin + Couple)
-  const { admin, couple } = await seedUsers(prisma)
+  // 1️⃣ Create a sample Couple
+  const couple = await seedUsers(prisma)
 
   // 2️⃣ Create a Gallery for the Couple
   const gallery = await seedGallery(prisma, couple.id)

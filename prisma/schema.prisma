@@ -41,15 +41,11 @@ model Gallery {
   id             String    @id @default(uuid())
   title          String
   description    String?
+  passphraseHash String?   // ✅ hashed passphrase
   userId         String
   owner          User      @relation(fields: [userId], references: [id])
   photos         Photo[]
   isPublished    Boolean   @default(false)
-
-  // ✅ Magic link authentication
-  magicLinkToken String?   @unique // unique token sent via email for editor access
-  pinHash        String?   // hashed PIN required to unlock editing
-
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 }
