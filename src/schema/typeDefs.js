@@ -129,11 +129,9 @@ export const typeDefs = gql`
     title: String!
     description: String
     date: String
-    status: GalleryStatus! # ✅ replaced isPublished
+    status: GalleryStatus!
     passphraseHash: String
-    userId: String!
-    owner: User
-    photos: [Photo!] # ✅ will be ordered by position
+    photos: [Photo!]
     createdAt: String
     updatedAt: String
   }
@@ -145,7 +143,7 @@ export const typeDefs = gql`
     imageUrl: String!
     caption: String
     takenAt: String
-    position: Int! # ✅ New field for ordering
+    position: Int!
     galleryId: String
     gallery: Gallery
     createdAt: String
