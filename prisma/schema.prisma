@@ -23,6 +23,16 @@ enum LightboxMode {
   BLURRED
 }
 
+enum DateFormat {
+  EEE_DD_MMM_YYYY
+  EEEE_DD_MMM_YYYY
+  EEEE_DD_MMMM_YYYY
+  DD_MMM_YYYY
+  DD_MMMM_YYYY
+  DD_MMM
+  DD_MMMM
+}
+
 enum SortOrder {
   ALPHABETICAL_ASC   // Alphabetical Order (A → Z)
   ALPHABETICAL_DESC  // Reverse Alphabetical (Z → A)
@@ -77,6 +87,7 @@ model AppSetting {
   id                String       @id @default(uuid())
   applicationName   String       // App Name, e.g. "Clabby's Stories"
   lightboxMode      LightboxMode @default(BLACK)
+  defaultDateFormat DateFormat   @default(EEE_DD_MMM_YYYY)
   defaultSortOrder  SortOrder    @default(NEWEST)
 
   createdAt         DateTime     @default(now())

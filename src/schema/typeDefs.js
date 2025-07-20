@@ -21,6 +21,16 @@ export const typeDefs = gql`
     PUBLISHED
   }
 
+  enum DateFormat {
+    EEE_DD_MMM_YYYY # Sun, 20 Jul 2025
+    EEEE_DD_MMM_YYYY # Sunday, 20 Jul 2025
+    EEEE_DD_MMMM_YYYY # Sunday, 20 July 2025
+    DD_MMM_YYYY # 20 Jul 2025
+    DD_MMMM_YYYY # 20 July 2025
+    DD_MMM # 20 Jul
+    DD_MMMM # 20 July
+  }
+
   # ==============================
   # ✅ PAGINATION TYPES
   # ==============================
@@ -150,6 +160,7 @@ export const typeDefs = gql`
     id: ID!
     applicationName: String!
     lightboxMode: LightboxMode!
+    defaultDateFormat: DateFormat!
     defaultSortOrder: SortOrder!
     createdAt: String!
     updatedAt: String!
@@ -203,6 +214,7 @@ export const typeDefs = gql`
   input UpdateAppSettingInput {
     applicationName: String
     lightboxMode: LightboxMode
+    defaultDateFormat: DateFormat
     defaultSortOrder: SortOrder
   }
 `

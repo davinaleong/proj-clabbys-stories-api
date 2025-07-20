@@ -223,9 +223,6 @@ export const resolvers = {
     },
 
     updateAppSetting: async (_, { id, data }, { prisma }) => {
-      if (!data.applicationName && !data.lightboxMode && !data.defaultSortOrder)
-        throw new Error("No update fields provided")
-
       return prisma.appSetting.update({
         where: { id },
         data: {
@@ -236,6 +233,9 @@ export const resolvers = {
           ...(data.defaultSortOrder && {
             defaultSortOrder: data.defaultSortOrder,
           }),
+          ...(data.defaultDateFormat && {
+            defaultDateFormat: data.defaultDateFormat,
+          }), // ✅ new
         },
       })
     },
