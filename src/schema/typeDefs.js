@@ -18,6 +18,7 @@ export const typeDefs = gql`
 
   enum GalleryStatus {
     DRAFT
+    PRIVATE
     PUBLISHED
   }
 
@@ -184,7 +185,6 @@ export const typeDefs = gql`
     title: String!
     description: String
     date: String
-    userId: String!
     passphrase: String
     status: GalleryStatus = DRAFT
   }
