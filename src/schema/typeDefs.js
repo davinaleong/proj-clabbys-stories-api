@@ -16,6 +16,11 @@ export const typeDefs = gql`
     OLDEST
   }
 
+  enum GalleryStatus {
+    DRAFT
+    PUBLISHED
+  }
+
   # ==============================
   # ✅ PAGINATION TYPES
   # ==============================
@@ -87,6 +92,7 @@ export const typeDefs = gql`
     createPhoto(data: CreatePhotoInput!): Photo!
     createPhotos(data: [CreatePhotoInput!]!): [Photo!]!
     assignPhotoToGallery(photoId: ID!, galleryId: ID!): Photo!
+    updatePhoto(id: ID!, data: UpdatePhotoInput!): Photo!
 
     # App Settings
     updateAppSetting(id: ID!, data: UpdateAppSettingInput!): AppSetting!
@@ -108,7 +114,7 @@ export const typeDefs = gql`
     title: String!
     description: String
     date: String
-    isPublished: Boolean
+    status: GalleryStatus! # ✅ replaced isPublished
     passphraseHash: String
     userId: String!
     owner: User
@@ -122,7 +128,6 @@ export const typeDefs = gql`
     title: String
     description: String
     imageUrl: String!
-    thumbUrl: String
     caption: String
     takenAt: String
     galleryId: String
@@ -165,6 +170,7 @@ export const typeDefs = gql`
     date: String
     userId: String!
     passphrase: String
+    status: GalleryStatus = DRAFT
   }
 
   input UpdateGalleryInput {
@@ -172,7 +178,7 @@ export const typeDefs = gql`
     description: String
     date: String
     passphrase: String
-    isPublished: Boolean
+    status: GalleryStatus
   }
 
   # ✅ Photo Inputs
@@ -183,6 +189,15 @@ export const typeDefs = gql`
     thumbUrl: String
     caption: String
     takenAt: String
+  }
+
+  input UpdatePhotoInput {
+    title: String
+    description: String
+    thumbUrl: String
+    caption: String
+    takenAt: String # ISO date string
+    galleryId: String # Optionally reassign to another gallery
   }
 
   input UpdateAppSettingInput {

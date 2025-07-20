@@ -13,6 +13,11 @@ generator client {
 // ==============================
 // ✅ ENUMS
 // ==============================
+enum GalleryStatus {
+  DRAFT
+  PUBLISHED
+}
+
 enum LightboxMode {
   BLACK
   BLURRED
@@ -41,7 +46,9 @@ model Gallery {
   id             String    @id @default(uuid())
   title          String
   description    String?
-  passphraseHash String?   // ✅ hashed passphrase
+  date           DateTime?
+  passphraseHash String?
+  status         GalleryStatus @default(DRAFT)
   userId         String
   owner          User      @relation(fields: [userId], references: [id])
   photos         Photo[]
@@ -54,8 +61,8 @@ model Photo {
   id          String    @id @default(uuid())
   title       String?
   description String?
+  date        DateTime?
   imageUrl    String
-  thumbUrl    String?
   takenAt     DateTime?
   galleryId   String
   gallery     Gallery   @relation(fields: [galleryId], references: [id])

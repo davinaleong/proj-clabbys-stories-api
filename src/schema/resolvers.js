@@ -74,16 +74,28 @@ export const resolvers = {
     createGallery: async (_, { data }, { prisma }) => {
       const { title, description, date, userId, passphrase } = data
 
+      // ✅ Optional: Hash passphrase if provided
       let passphraseHash = null
       if (passphrase) {
         passphraseHash = await bcrypt.hash(passphrase, 10)
+      }
+
+      // ✅ Normalize date (convert to proper ISO/Date object)
+      let normalizedDate = null
+      if (date) {
+        const parsed = new Date(date)
+        if (!isNaN(parsed)) {
+          normalizedDate = parsed // ✅ Prisma will store as PostgreSQL timestamp
+        } else {
+          throw new Error("Invalid date format. Please use ISO 8601.")
+        }
       }
 
       return prisma.gallery.create({
         data: {
           title,
           description,
-          date,
+          date: normalizedDate, // ✅ Safe for PostgreSQL
           userId,
           passphraseHash,
         },
@@ -93,6 +105,17 @@ export const resolvers = {
     updateGallery: async (_, { id, data }, { prisma }) => {
       let updateData = { ...data }
 
+      // ✅ Normalize date if provided
+      if (data.date) {
+        const parsed = new Date(data.date)
+        if (!isNaN(parsed)) {
+          updateData.date = parsed
+        } else {
+          throw new Error("Invalid date format. Please use ISO 8601.")
+        }
+      }
+
+      // ✅ If passphrase is being updated → hash it
       if (data.passphrase) {
         updateData.passphraseHash = await bcrypt.hash(data.passphrase, 10)
         delete updateData.passphrase
@@ -137,7 +160,26 @@ export const resolvers = {
     },
 
     // ✅ Photos
-    createPhoto: (_, { data }, { prisma }) => prisma.photo.create({ data }),
+    createPhoto: async (_, { data }, { prisma }) => {
+      const { takenAt, ...rest } = data
+
+      let normalizedTakenAt = null
+      if (takenAt) {
+        const parsed = new Date(takenAt)
+        if (!isNaN(parsed)) {
+          normalizedTakenAt = parsed
+        } else {
+          throw new Error("Invalid takenAt date format")
+        }
+      }
+
+      return prisma.photo.create({
+        data: {
+          ...rest,
+          takenAt: normalizedTakenAt,
+        },
+      })
+    },
 
     createPhotos: async (_, { data }, { prisma }) => {
       await prisma.photo.createMany({ data, skipDuplicates: true })
@@ -156,6 +198,27 @@ export const resolvers = {
       return prisma.photo.update({
         where: { id: photoId },
         data: { galleryId },
+      })
+    },
+
+    updatePhoto: async (_, { id, data }, { prisma }) => {
+      let updateData = { ...data }
+
+      // ✅ Normalize takenAt if provided
+      if (data.takenAt) {
+        const parsed = new Date(data.takenAt)
+        if (!isNaN(parsed)) {
+          updateData.takenAt = parsed
+        } else {
+          throw new Error(
+            "Invalid takenAt date format. Use ISO 8601 (e.g., 2025-07-20T12:00:00.000Z)."
+          )
+        }
+      }
+
+      return prisma.photo.update({
+        where: { id },
+        data: updateData,
       })
     },
 
