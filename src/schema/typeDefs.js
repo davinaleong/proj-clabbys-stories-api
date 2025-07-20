@@ -48,30 +48,19 @@ export const typeDefs = gql`
   # ✅ QUERIES
   # ==============================
   type Query {
-    # Users (couples only)
+    # Users
     users: [User!]!
     user(id: ID!): User
 
     # Galleries
-    galleries(userId: ID): [Gallery!]!
+    galleries: [Gallery!]!
     gallery(id: ID!): Gallery
-
-    # ✅ Cursor-based Pagination
-    galleriesPaginated(
-      userId: ID
-      after: String
-      first: Int = 10
-    ): GalleryConnection!
+    galleriesPaginated(after: String, first: Int = 10): GalleryConnection!
 
     # Photos
-    photos(galleryId: ID!): [Photo!]!
-
-    # ✅ Cursor-based Pagination for Photos
-    photosPaginated(
-      galleryId: ID!
-      after: String
-      first: Int = 10
-    ): PhotoConnection!
+    photos: [Photo!]! # All photos (unassigned + assigned)
+    galleryPhotos(galleryId: ID!): [Photo!]!
+    photosPaginated(after: String, first: Int = 10): PhotoConnection!
 
     # App Settings
     appSettings: [AppSetting!]!
@@ -82,27 +71,29 @@ export const typeDefs = gql`
   # ✅ MUTATIONS
   # ==============================
   type Mutation {
-    # Users (for couples)
+    # Users
     createUser(data: CreateUserInput!): User!
 
     # Galleries
     createGallery(data: CreateGalleryInput!): Gallery!
+    updateGallery(id: ID!, data: UpdateGalleryInput!): Gallery!
     publishGallery(id: ID!): Gallery!
 
-    # ✅ Passphrase Authentication
+    # ✅ Gallery Password
     setGalleryPassphrase(id: ID!, passphrase: String!): Boolean!
     loginGallery(id: ID!, passphrase: String!): AuthPayload!
 
     # Photos
     createPhoto(data: CreatePhotoInput!): Photo!
-    createPhotos(data: CreatePhotoBatchInput!): [Photo!]!
+    createPhotos(data: [CreatePhotoInput!]!): [Photo!]!
+    assignPhotoToGallery(photoId: ID!, galleryId: ID!): Photo!
 
     # App Settings
     updateAppSetting(id: ID!, data: UpdateAppSettingInput!): AppSetting!
   }
 
   # ==============================
-  # ✅ SECURE LOGIN RETURN
+  # ✅ AUTH
   # ==============================
   type AuthPayload {
     token: String!
@@ -116,8 +107,9 @@ export const typeDefs = gql`
     id: ID!
     title: String!
     description: String
+    date: String
     isPublished: Boolean
-    passphraseHash: String # stored hashed passphrase (not exposed normally)
+    passphraseHash: String
     userId: String!
     owner: User
     photos: [Photo!]
@@ -133,7 +125,7 @@ export const typeDefs = gql`
     thumbUrl: String
     caption: String
     takenAt: String
-    galleryId: String!
+    galleryId: String
     gallery: Gallery
     createdAt: String
     updatedAt: String
@@ -166,12 +158,24 @@ export const typeDefs = gql`
     email: String!
   }
 
+  # ✅ Gallery Inputs
   input CreateGalleryInput {
     title: String!
     description: String
+    date: String
     userId: String!
+    passphrase: String
   }
 
+  input UpdateGalleryInput {
+    title: String
+    description: String
+    date: String
+    passphrase: String
+    isPublished: Boolean
+  }
+
+  # ✅ Photo Inputs
   input CreatePhotoInput {
     title: String
     description: String
@@ -179,12 +183,6 @@ export const typeDefs = gql`
     thumbUrl: String
     caption: String
     takenAt: String
-    galleryId: String!
-  }
-
-  input CreatePhotoBatchInput {
-    galleryId: String!
-    photos: [CreatePhotoInput!]!
   }
 
   input UpdateAppSettingInput {
