@@ -35,9 +35,14 @@ export const resolvers = {
     },
 
     // ✅ Photos
-    photos: (_, __, { prisma }) => prisma.photo.findMany(),
+    photos: (_, __, { prisma }) =>
+      prisma.photo.findMany({ orderBy: { createdAt: "desc" } }),
+
     galleryPhotos: (_, { galleryId }, { prisma }) =>
-      prisma.photo.findMany({ where: { galleryId } }),
+      prisma.photo.findMany({
+        where: { galleryId },
+        orderBy: { position: "asc" }, // ✅ always sorted by position
+      }),
 
     photosPaginated: async (_, { after, first }, { prisma }) => {
       const take = first ?? 10
@@ -72,7 +77,7 @@ export const resolvers = {
 
     // ✅ Gallery Mutations
     createGallery: async (_, { data }, { prisma }) => {
-      const { title, description, date, userId, passphrase } = data
+      const { title, description, date, userId, passphrase, status } = data
 
       // ✅ Optional: Hash passphrase if provided
       let passphraseHash = null
@@ -85,7 +90,7 @@ export const resolvers = {
       if (date) {
         const parsed = new Date(date)
         if (!isNaN(parsed)) {
-          normalizedDate = parsed // ✅ Prisma will store as PostgreSQL timestamp
+          normalizedDate = parsed
         } else {
           throw new Error("Invalid date format. Please use ISO 8601.")
         }
@@ -95,9 +100,10 @@ export const resolvers = {
         data: {
           title,
           description,
-          date: normalizedDate, // ✅ Safe for PostgreSQL
+          date: normalizedDate,
           userId,
           passphraseHash,
+          status: status || "DRAFT",
         },
       })
     },
@@ -130,7 +136,7 @@ export const resolvers = {
     publishGallery: (_, { id }, { prisma }) =>
       prisma.gallery.update({
         where: { id },
-        data: { isPublished: true },
+        data: { status: "PUBLISHED" }, // ✅ now uses status
       }),
 
     setGalleryPassphrase: async (_, { id, passphrase }, { prisma }) => {
@@ -161,7 +167,7 @@ export const resolvers = {
 
     // ✅ Photos
     createPhoto: async (_, { data }, { prisma }) => {
-      const { takenAt, ...rest } = data
+      const { takenAt, galleryId, ...rest } = data
 
       let normalizedTakenAt = null
       if (takenAt) {
@@ -173,10 +179,22 @@ export const resolvers = {
         }
       }
 
+      // ✅ Calculate default position → last in gallery
+      let nextPosition = 1
+      if (galleryId) {
+        const maxPosition = await prisma.photo.aggregate({
+          where: { galleryId },
+          _max: { position: true },
+        })
+        nextPosition = (maxPosition._max.position || 0) + 1
+      }
+
       return prisma.photo.create({
         data: {
           ...rest,
+          galleryId,
           takenAt: normalizedTakenAt,
+          position: nextPosition,
         },
       })
     },
@@ -188,16 +206,22 @@ export const resolvers = {
       })
     },
 
-    // ✅ Assign existing photo to a gallery
     assignPhotoToGallery: async (_, { photoId, galleryId }, { prisma }) => {
       const gallery = await prisma.gallery.findUnique({
         where: { id: galleryId },
       })
       if (!gallery) throw new Error("Gallery not found")
 
+      // ✅ Assign to end of gallery
+      const maxPosition = await prisma.photo.aggregate({
+        where: { galleryId },
+        _max: { position: true },
+      })
+      const newPosition = (maxPosition._max.position || 0) + 1
+
       return prisma.photo.update({
         where: { id: photoId },
-        data: { galleryId },
+        data: { galleryId, position: newPosition },
       })
     },
 
@@ -222,6 +246,25 @@ export const resolvers = {
       })
     },
 
+    // ✅ Reorder: Single photo
+    updatePhotoPosition: async (_, { photoId, position }, { prisma }) => {
+      return prisma.photo.update({
+        where: { id: photoId },
+        data: { position },
+      })
+    },
+
+    // ✅ Reorder: Batch
+    updatePhotoOrder: async (_, { updates }, { prisma }) => {
+      const transactions = updates.map((u) =>
+        prisma.photo.update({
+          where: { id: u.photoId },
+          data: { position: u.position },
+        })
+      )
+      return prisma.$transaction(transactions)
+    },
+
     updateAppSetting: async (_, { id, data }, { prisma }) => {
       return prisma.appSetting.update({
         where: { id },
@@ -235,7 +278,7 @@ export const resolvers = {
           }),
           ...(data.defaultDateFormat && {
             defaultDateFormat: data.defaultDateFormat,
-          }), // ✅ new
+          }),
         },
       })
     },
@@ -250,7 +293,10 @@ export const resolvers = {
     owner: (parent, _, { prisma }) =>
       prisma.user.findUnique({ where: { id: parent.userId } }),
     photos: (parent, _, { prisma }) =>
-      prisma.photo.findMany({ where: { galleryId: parent.id } }),
+      prisma.photo.findMany({
+        where: { galleryId: parent.id },
+        orderBy: { position: "asc" }, // ✅ always sorted by position
+      }),
   },
 
   Photo: {

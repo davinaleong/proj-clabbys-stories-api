@@ -24,13 +24,13 @@ enum LightboxMode {
 }
 
 enum DateFormat {
-  EEE_DD_MMM_YYYY
-  EEEE_DD_MMM_YYYY
-  EEEE_DD_MMMM_YYYY
-  DD_MMM_YYYY
-  DD_MMMM_YYYY
-  DD_MMM
-  DD_MMMM
+  EEE_DD_MMM_YYYY      // Sun, 20 Jul 2025
+  EEEE_DD_MMM_YYYY     // Sunday, 20 Jul 2025
+  EEEE_DD_MMMM_YYYY    // Sunday, 20 July 2025
+  DD_MMM_YYYY          // 20 Jul 2025
+  DD_MMMM_YYYY         // 20 July 2025
+  DD_MMM               // 20 Jul
+  DD_MMMM              // 20 July
 }
 
 enum SortOrder {
@@ -53,18 +53,17 @@ model User {
 }
 
 model Gallery {
-  id             String    @id @default(uuid())
+  id             String         @id @default(uuid())
   title          String
   description    String?
   date           DateTime?
   passphraseHash String?
-  status         GalleryStatus @default(DRAFT)
+  status         GalleryStatus  @default(DRAFT)
   userId         String
-  owner          User      @relation(fields: [userId], references: [id])
+  owner          User           @relation(fields: [userId], references: [id])
   photos         Photo[]
-  isPublished    Boolean   @default(false)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 }
 
 model Photo {
@@ -74,6 +73,7 @@ model Photo {
   date        DateTime?
   imageUrl    String
   takenAt     DateTime?
+  position    Int        @default(0)
   galleryId   String
   gallery     Gallery   @relation(fields: [galleryId], references: [id])
   createdAt   DateTime  @default(now())

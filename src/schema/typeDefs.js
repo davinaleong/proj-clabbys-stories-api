@@ -104,6 +104,10 @@ export const typeDefs = gql`
     assignPhotoToGallery(photoId: ID!, galleryId: ID!): Photo!
     updatePhoto(id: ID!, data: UpdatePhotoInput!): Photo!
 
+    # ✅ Photo ordering
+    updatePhotoPosition(photoId: ID!, position: Int!): Photo!
+    updatePhotoOrder(updates: [PhotoOrderUpdateInput!]!): [Photo!]!
+
     # App Settings
     updateAppSetting(id: ID!, data: UpdateAppSettingInput!): AppSetting!
   }
@@ -128,7 +132,7 @@ export const typeDefs = gql`
     passphraseHash: String
     userId: String!
     owner: User
-    photos: [Photo!]
+    photos: [Photo!] # ✅ will be ordered by position
     createdAt: String
     updatedAt: String
   }
@@ -140,6 +144,7 @@ export const typeDefs = gql`
     imageUrl: String!
     caption: String
     takenAt: String
+    position: Int! # ✅ New field for ordering
     galleryId: String
     gallery: Gallery
     createdAt: String
@@ -209,6 +214,13 @@ export const typeDefs = gql`
     caption: String
     takenAt: String # ISO date string
     galleryId: String # Optionally reassign to another gallery
+    position: Int # ✅ allow reordering
+  }
+
+  # ✅ Batch photo order update
+  input PhotoOrderUpdateInput {
+    photoId: ID!
+    position: Int!
   }
 
   input UpdateAppSettingInput {
