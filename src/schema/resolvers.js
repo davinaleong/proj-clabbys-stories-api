@@ -73,7 +73,48 @@ export const resolvers = {
   },
 
   Mutation: {
+    // ✅ Existing createUser (still works for basic non-auth users)
     createUser: (_, { data }, { prisma }) => prisma.user.create({ data }),
+
+    // ✅ Register User with password hashing
+    registerUser: async (_, { data }, { prisma }) => {
+      const { name, email, password } = data
+
+      // Check if user exists
+      const existing = await prisma.user.findUnique({ where: { email } })
+      if (existing) throw new Error("User already exists")
+
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 10)
+
+      return prisma.user.create({
+        data: {
+          name,
+          email,
+          passwordHash,
+        },
+      })
+    },
+
+    // ✅ Login User
+    loginUser: async (_, { email, password }, { prisma }) => {
+      const user = await prisma.user.findUnique({ where: { email } })
+      if (!user || !user.passwordHash)
+        throw new Error("Invalid email or password")
+
+      // Compare password with bcrypt
+      const valid = await bcrypt.compare(password, user.passwordHash)
+      if (!valid) throw new Error("Invalid email or password")
+
+      // Sign JWT
+      const token = jwt.sign(
+        { userId: user.id, email: user.email, role: user.role },
+        env.JWT_SECRET,
+        { expiresIn: "7d" }
+      )
+
+      return { token, user }
+    },
 
     // ✅ Gallery Mutations
     createGallery: async (_, { data }, { prisma }) => {
@@ -290,8 +331,10 @@ export const resolvers = {
   },
 
   Gallery: {
-    owner: (parent, _, { prisma }) =>
-      prisma.user.findUnique({ where: { id: parent.userId } }),
+    owner: (parent, _, { prisma }) => {
+      if (!parent.ownerId) return null
+      return prisma.user.findUnique({ where: { id: parent.ownerId } })
+    },
     photos: (parent, _, { prisma }) =>
       prisma.photo.findMany({
         where: { galleryId: parent.id },

@@ -40,16 +40,38 @@ enum SortOrder {
   OLDEST             // Oldest First
 }
 
+enum UserRole {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
 // ==============================
 // ✅ MODELS
 // ==============================
+model User {
+  id             String     @id @default(uuid())
+  email          String     @unique
+  passwordHash   String     // store bcrypt or argon2 hash
+  role           UserRole   @default(VIEWER)
+  galleries      Gallery[]  // Optional: link galleries owned by this user
+
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+}
+
 model Gallery {
   id             String         @id @default(uuid())
   title          String
   description    String?
   date           DateTime?
-  passphraseHash String?
+  passphraseHash String?        // Optional password for guest access
   status         GalleryStatus  @default(DRAFT)
+
+  // Owner of the gallery
+  userId         String?
+  user           User?          @relation(fields: [userId], references: [id])
+
   photos         Photo[]
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
@@ -63,8 +85,10 @@ model Photo {
   imageUrl    String
   takenAt     DateTime?
   position    Int        @default(0)
+
   galleryId   String
   gallery     Gallery   @relation(fields: [galleryId], references: [id])
+
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }

@@ -89,6 +89,8 @@ export const typeDefs = gql`
   type Mutation {
     # Users
     createUser(data: CreateUserInput!): User!
+    registerUser(data: RegisterUserInput!): User!
+    loginUser(email: String!, password: String!): UserAuthPayload!
 
     # Galleries
     createGallery(data: CreateGalleryInput!): Gallery!
@@ -121,6 +123,11 @@ export const typeDefs = gql`
     gallery: Gallery!
   }
 
+  type UserAuthPayload {
+    token: String!
+    user: User!
+  }
+
   # ==============================
   # ✅ CORE TYPES
   # ==============================
@@ -132,6 +139,8 @@ export const typeDefs = gql`
     status: GalleryStatus!
     passphraseHash: String
     photos: [Photo!]
+    owner: User
+    ownerId: String
     createdAt: String
     updatedAt: String
   }
@@ -176,6 +185,12 @@ export const typeDefs = gql`
   input CreateUserInput {
     name: String!
     email: String!
+  }
+
+  input RegisterUserInput {
+    name: String!
+    email: String!
+    password: String!
   }
 
   # ✅ Gallery Inputs
