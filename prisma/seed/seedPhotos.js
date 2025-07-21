@@ -1,5 +1,5 @@
 // prisma/seed/seedPhotos.js
-export async function seedPhotos(prisma, galleryId) {
+export async function seedPhotos(prisma, gallery) {
   const photos = [
     {
       title: "Photo 0007",
@@ -33,15 +33,16 @@ export async function seedPhotos(prisma, galleryId) {
     },
   ]
 
-  console.log(`📸 Seeding ${photos.length} photos for gallery ${galleryId}`)
+  console.log(`📸 Seeding ${photos.length} photos for gallery ${gallery.id}`)
 
   for (const photo of photos) {
     await prisma.photo.create({
       data: {
         title: photo.title,
         imageUrl: photo.imageUrl,
-        thumbUrl: photo.imageUrl, // can use same for now
-        galleryId,
+        gallery: {
+          connect: { id: gallery.id },
+        },
       },
     })
     console.log(`✅ Added ${photo.title}`)

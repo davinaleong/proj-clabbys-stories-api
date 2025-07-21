@@ -1,9 +1,8 @@
 import bcrypt from "bcrypt"
 
-export async function seedGallery(prisma, coupleId) {
+export async function seedGallery(prisma, user) {
   console.log("🖼️ Seeding gallery...")
 
-  // ✅ Hash the default passphrase
   const defaultPassphrase = "secret123"
   const passphraseHash = await bcrypt.hash(defaultPassphrase, 10)
 
@@ -11,9 +10,11 @@ export async function seedGallery(prisma, coupleId) {
     data: {
       title: "Sample Cloudinary Gallery",
       description: "Demo gallery with placeholder Cloudinary images",
-      passphraseHash, // ✅ store hashed passphrase
-      userId: coupleId,
-      isPublished: true,
+      passphraseHash,
+      status: "PUBLISHED",
+      user: {
+        connect: { id: user.id },
+      },
     },
   })
 
