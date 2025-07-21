@@ -36,4 +36,5 @@ export const env = {
   // =========================
   LOG_LEVEL: process.env.LOG_LEVEL || "info",
   APOLLO_PLAYGROUND: process.env.APOLLO_PLAYGROUND === "true", // Boolean
+  INTROSPECTION: process.env.INTROSPECTION === "false", // Boolean
 }

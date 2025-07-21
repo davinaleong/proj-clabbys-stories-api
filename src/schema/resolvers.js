@@ -97,23 +97,31 @@ export const resolvers = {
     },
 
     // ✅ Login User
-    loginUser: async (_, { email, password }, { prisma }) => {
+    loginUser: async (_, { email, password }, { prisma, res }) => {
       const user = await prisma.user.findUnique({ where: { email } })
-      if (!user || !user.passwordHash)
-        throw new Error("Invalid email or password")
+      if (!user || !user.passwordHash) throw new Error("Invalid credentials")
 
-      // Compare password with bcrypt
       const valid = await bcrypt.compare(password, user.passwordHash)
-      if (!valid) throw new Error("Invalid email or password")
+      if (!valid) throw new Error("Invalid credentials")
 
-      // Sign JWT
       const token = jwt.sign(
         { userId: user.id, email: user.email, role: user.role },
         env.JWT_SECRET,
         { expiresIn: "7d" }
       )
 
-      return { token, user }
+      // ✅ Set httpOnly cookie
+      res.cookie("auth_token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production", // HTTPS only in prod
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      })
+
+      return {
+        token, // still returning for debugging, can be omitted
+        user,
+      }
     },
 
     // ✅ Gallery Mutations

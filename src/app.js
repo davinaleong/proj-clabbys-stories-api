@@ -14,8 +14,8 @@ async function startApolloServer() {
   const server = new ApolloServer({
     typeDefs,
     resolvers,
-    context: () => ({ prisma }),
-    introspection: true, // allow schema introspection for tools like Postman
+    context: ({ req, res }) => ({ prisma, req, res }),
+    introspection: env.INTROSPECTION, // allow schema introspection for tools like Postman
   })
 
   // Start Apollo Server
