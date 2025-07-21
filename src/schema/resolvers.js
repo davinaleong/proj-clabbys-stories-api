@@ -111,6 +111,20 @@ export const resolvers = {
       return { token }
     },
 
+    logoutUser: async (_, __, { res }) => {
+      // If you’re setting token cookies, clear them:
+      res.clearCookie("token", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "Strict",
+      })
+
+      return {
+        success: true,
+        message: "Logged out successfully",
+      }
+    },
+
     // ✅ Gallery Mutations
     createGallery: async (_, { data }, { prisma }) => {
       const { title, description, date, userId, passphrase, status } = data

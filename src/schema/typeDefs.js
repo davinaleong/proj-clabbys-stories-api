@@ -91,6 +91,7 @@ export const typeDefs = gql`
     createUser(data: CreateUserInput!): User!
     registerUser(data: RegisterUserInput!): User!
     loginUser(email: String!, password: String!): UserAuthPayload!
+    logoutUser: LogoutResponse!
 
     # Galleries
     createGallery(data: CreateGalleryInput!): Gallery!
@@ -126,6 +127,11 @@ export const typeDefs = gql`
   type UserAuthPayload {
     token: String!
     user: User!
+  }
+
+  type LogoutResponse {
+    success: Boolean!
+    message: String!
   }
 
   # ==============================
