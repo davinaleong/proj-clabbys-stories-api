@@ -24,13 +24,13 @@ enum LightboxMode {
 }
 
 enum DateFormat {
-  EEE_DD_MMM_YYYY      // Sun, 20 Jul 2025
-  EEEE_DD_MMM_YYYY     // Sunday, 20 Jul 2025
-  EEEE_DD_MMMM_YYYY    // Sunday, 20 July 2025
-  DD_MMM_YYYY          // 20 Jul 2025
-  DD_MMMM_YYYY         // 20 July 2025
-  DD_MMM               // 20 Jul
-  DD_MMMM              // 20 July
+  EEE_D_MMM_YYYY      // Sun, 20 Jul 2025
+  EEEE_D_MMM_YYYY     // Sunday, 20 Jul 2025
+  EEEE_D_MMMM_YYYY    // Sunday, 20 July 2025
+  D_MMM_YYYY          // 20 Jul 2025
+  D_MMMM_YYYY         // 20 July 2025
+  D_MMM               // 20 Jul
+  D_MMMM              // 20 July
 }
 
 enum SortOrder {
@@ -101,7 +101,7 @@ model AppSetting {
   id                String       @id @default(uuid())
   applicationName   String       // App Name, e.g. "Clabby's Stories"
   lightboxMode      LightboxMode @default(BLACK)
-  defaultDateFormat DateFormat   @default(EEE_DD_MMM_YYYY)
+  defaultDateFormat DateFormat   @default(EEE_D_MMM_YYYY)
   defaultSortOrder  SortOrder    @default(NEWEST)
 
   createdAt         DateTime     @default(now())
