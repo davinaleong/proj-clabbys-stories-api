@@ -5,6 +5,7 @@ import { PrismaClient } from "@prisma/client"
 import { env } from "./config/env.js"
 import { allowedOrigins } from "./config/allowed-origins.js"
 import uploadRoute from "./routes/upload.js" // REST upload route
+import exportRoute from "./routes/export.js" // REST export route
 import { typeDefs } from "./schema/typeDefs.js"
 import { resolvers } from "./schema/resolvers.js"
 
@@ -47,8 +48,11 @@ async function startApolloServer() {
   // ✅ REST Upload Route (multer + Cloudinary)
   app.use("/api/upload", uploadRoute)
 
+  // ✅ REST Export Route
+  app.use("/api/export", exportRoute)
+
   // ✅ Health check endpoint
-  app.get("/health", (req, res) => {
+  app.get("/api/health", (req, res) => {
     res.json({ status: "OK", message: "Server is running" })
   })
 

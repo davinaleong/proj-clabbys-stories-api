@@ -3,7 +3,7 @@ import ExcelJS from "exceljs"
 import { PrismaClient } from "@prisma/client"
 import dayjs from "dayjs"
 import _ from "lodash"
-import { env } from "./../config/env"
+import { env } from "../config/env.js"
 
 const prisma = new PrismaClient()
 const router = express.Router()
