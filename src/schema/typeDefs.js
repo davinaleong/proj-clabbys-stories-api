@@ -71,12 +71,12 @@ export const typeDefs = gql`
     # Galleries
     galleries: [Gallery!]!
     gallery(id: ID!): Gallery
-    galleriesPaginated(after: String, first: Int = 10): GalleryConnection!
+    galleriesPaginated(after: String, first: Int = 12): GalleryConnection!
 
     # Photos
-    photos: [Photo!]! # All photos (unassigned + assigned)
+    photos: [Photo!]!
     galleryPhotos(galleryId: ID!): [Photo!]!
-    photosPaginated(after: String, first: Int = 10): PhotoConnection!
+    photosPaginated(after: String, first: Int = 12): PhotoConnection!
 
     # App Settings
     appSettings: [AppSetting!]!
@@ -216,14 +216,16 @@ export const typeDefs = gql`
     status: GalleryStatus
   }
 
-  # ✅ Photo Inputs
+  # ✅ Photo Inputs (must belong to a gallery)
   input CreatePhotoInput {
+    galleryId: String!
     title: String
     description: String
     imageUrl: String!
     thumbUrl: String
     caption: String
     takenAt: String
+    fileSize: Int # optional, for validation
   }
 
   input UpdatePhotoInput {
@@ -233,7 +235,7 @@ export const typeDefs = gql`
     caption: String
     takenAt: String # ISO date string
     galleryId: String # Optionally reassign to another gallery
-    position: Int # ✅ allow reordering
+    position: Int
   }
 
   # ✅ Batch photo order update
