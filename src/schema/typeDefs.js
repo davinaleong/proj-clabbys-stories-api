@@ -222,19 +222,15 @@ export const typeDefs = gql`
     title: String
     description: String
     imageUrl: String!
-    thumbUrl: String
-    caption: String
     takenAt: String
     fileSize: Int # optional, for validation
   }
 
   input UpdatePhotoInput {
+    galleryId: String # Optionally reassign to another gallery
     title: String
     description: String
-    thumbUrl: String
-    caption: String
     takenAt: String # ISO date string
-    galleryId: String # Optionally reassign to another gallery
     position: Int
   }
 
