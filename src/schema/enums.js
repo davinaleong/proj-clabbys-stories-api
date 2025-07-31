@@ -1,0 +1,27 @@
+export const GalleryStatus = {
+  DRAFT: "DRAFT",
+  PRIVATE: "PRIVATE",
+  PUBLISHED: "PUBLISHED",
+}
+
+export const LightboxMode = {
+  BLACK: "BLACK",
+  BLURRED: "BLURRED",
+}
+
+export const SortOrder = {
+  ALPHABETICAL_ASC: "ALPHABETICAL_ASC",
+  ALPHABETICAL_DESC: "ALPHABETICAL_DESC",
+  NEWEST: "NEWEST",
+  OLDEST: "OLDEST",
+}
+
+export const DateFormat = {
+  EEE_D_MMM_YYYY: "EEE_D_MMM_YYYY",
+  EEEE_D_MMM_YYYY: "EEEE_D_MMM_YYYY",
+  EEEE_D_MMMM_YYYY: "EEEE_D_MMMM_YYYY",
+  D_MMM_YYYY: "D_MMM_YYYY",
+  D_MMMM_YYYY: "D_MMMM_YYYY",
+  D_MMM: "D_MMM",
+  D_MMMM: "D_MMMM",
+}
