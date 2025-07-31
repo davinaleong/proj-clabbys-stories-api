@@ -88,8 +88,8 @@ export const typeDefs = gql`
 
     # App Settings
     appSettings: [AppSetting!]!
-    appSetting(id: ID!): 
-    
+    appSetting(id: ID!): AppSetting
+
     # App Settings Enum Values
     galleryStatusEnum: EnumValuesResult!
     lightboxModeEnum: EnumValuesResult!
