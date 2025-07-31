@@ -98,6 +98,19 @@ export const resolvers = {
     appSettings: (_, __, { prisma }) => prisma.appSetting.findMany(),
     appSetting: (_, { id }, { prisma }) =>
       prisma.appSetting.findUnique({ where: { id } }),
+
+    galleryStatusEnum: () => ({
+      values: Object.keys(GalleryStatus).map((name) => ({ name })),
+    }),
+    lightboxModeEnum: () => ({
+      values: Object.keys(LightboxMode).map((name) => ({ name })),
+    }),
+    sortOrderEnum: () => ({
+      values: Object.keys(SortOrder).map((name) => ({ name })),
+    }),
+    dateFormatEnum: () => ({
+      values: Object.keys(DateFormat).map((name) => ({ name })),
+    }),
   },
 
   Mutation: {

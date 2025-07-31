@@ -60,6 +60,14 @@ export const typeDefs = gql`
     pageInfo: PageInfo!
   }
 
+  type EnumValues {
+    name: String!
+  }
+
+  type EnumValuesResult {
+    values: [EnumValues!]!
+  }
+
   # ==============================
   # ✅ QUERIES
   # ==============================
@@ -80,7 +88,13 @@ export const typeDefs = gql`
 
     # App Settings
     appSettings: [AppSetting!]!
-    appSetting(id: ID!): AppSetting
+    appSetting(id: ID!): 
+    
+    # App Settings Enum Values
+    galleryStatusEnum: EnumValuesResult!
+    lightboxModeEnum: EnumValuesResult!
+    sortOrderEnum: EnumValuesResult!
+    dateFormatEnum: EnumValuesResult!
   }
 
   # ==============================
