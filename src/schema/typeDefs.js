@@ -157,6 +157,7 @@ export const typeDefs = gql`
     description: String
     date: String
     status: GalleryStatus!
+    passphrase: String
     passphraseHash: String
     photos: [Photo!]
     owner: User
