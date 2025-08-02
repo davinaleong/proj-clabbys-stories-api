@@ -207,6 +207,7 @@ export const typeDefs = gql`
   input CreateUserInput {
     name: String!
     email: String!
+    password: String!
   }
 
   input RegisterUserInput {
