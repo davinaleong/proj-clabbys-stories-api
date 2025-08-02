@@ -1,4 +1,5 @@
-import { LightboxMode, DateFormat, SortOrder } from "@prisma/client"
+import pkg from "@prisma/client"
+const { LightboxMode, DateFormat, SortOrder } = pkg
 
 export async function seedSetting(
   prisma,
@@ -11,20 +12,22 @@ export async function seedSetting(
 ) {
   const fixedId = "00000000-0000-0000-0000-000000000001"
 
-  const appSetting = await prisma.appSetting.upsert({
+  const existing = await prisma.appSetting.findUnique({
     where: { id: fixedId },
-    update: {
-      applicationName,
-      lightboxMode: LightboxMode.BLACK,
-      defaultDateFormat: DateFormat.EEE_D_MMM_YYYY,
-      defaultSortOrder: SortOrder.NEWEST,
-    },
-    create: {
+  })
+
+  if (existing) {
+    console.log("⚠️ AppSetting already exists, skipping seed.")
+    return existing
+  }
+
+  const appSetting = await prisma.appSetting.create({
+    data: {
       id: fixedId,
       applicationName,
-      lightboxMode: LightboxMode.BLACK,
-      defaultDateFormat: DateFormat.EEE_D_MMM_YYYY,
-      defaultSortOrder: SortOrder.NEWEST,
+      lightboxMode: LightboxMode[lightboxMode],
+      defaultDateFormat: DateFormat[defaultDateFormat],
+      defaultSortOrder: SortOrder[defaultSortOrder],
     },
   })
 
