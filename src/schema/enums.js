@@ -1,7 +1,7 @@
 export const GalleryStatus = {
   DRAFT: "DRAFT",
-  PRIVATE: "PRIVATE",
   PUBLISHED: "PUBLISHED",
+  PUBLIC: "PUBLIC",
 }
 
 export const LightboxMode = {

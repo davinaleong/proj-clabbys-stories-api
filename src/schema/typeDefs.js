@@ -18,8 +18,8 @@ export const typeDefs = gql`
 
   enum GalleryStatus {
     DRAFT
-    PRIVATE
     PUBLISHED
+    PUBLIC
   }
 
   enum DateFormat {

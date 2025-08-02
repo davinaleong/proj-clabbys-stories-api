@@ -2,6 +2,8 @@ import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 import { env } from "./../config/env.js"
 import { GalleryStatus, LightboxMode, SortOrder, DateFormat } from "./enums.js"
+import lodash from "lodash"
+const { update } = lodash
 
 function encodeCursor(createdAt, id) {
   return Buffer.from(`${createdAt.toISOString()}::${id}`).toString("base64")
@@ -181,18 +183,33 @@ export const resolvers = {
     updateGallery: async (_, { id, data }, { prisma }) => {
       let updateData = { ...data }
 
+      // ✅ Convert status string to enum
+      if (data.status) {
+        if (!Object.keys(GalleryStatus).includes(data.status)) {
+          throw new Error(`Invalid status: ${data.status}`)
+        }
+        updateData.status = GalleryStatus[data.status]
+      }
+
+      // ✅ Validate and parse date
       if (data.date) {
         const parsed = new Date(data.date)
         if (!isNaN(parsed)) updateData.date = parsed
         else throw new Error("Invalid date format. Please use ISO 8601.")
       }
 
+      // ✅ Hash passphrase if provided
       if (data.passphrase) {
         updateData.passphraseHash = await bcrypt.hash(data.passphrase, 10)
         delete updateData.passphrase
       }
 
-      return prisma.gallery.update({ where: { id }, data: updateData })
+      console.log(updateData)
+
+      return prisma.gallery.update({
+        where: { id },
+        data: updateData,
+      })
     },
 
     publishGallery: (_, { id }, { prisma }) =>
