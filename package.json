@@ -11,8 +11,7 @@
     "prisma:reset": "prisma migrate reset --force",
     "prisma:studio": "prisma studio",
     "prisma:seed": "node prisma/seed/index.js",
-    "db:push": "prisma db push",
-    "seed:settings": "node prisma/seed/seedSettingsOnly.js"
+    "db:push": "prisma db push"
   },
   "keywords": [],
   "author": "",
