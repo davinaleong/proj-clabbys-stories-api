@@ -127,6 +127,7 @@ export const typeDefs = gql`
     updatePhotoOrder(updates: [PhotoOrderUpdateInput!]!): [Photo!]!
 
     # App Settings
+    createAppSetting(data: CreateAppSettingInput!): AppSetting!
     updateAppSetting(id: ID!, data: UpdateAppSettingInput!): AppSetting!
   }
 
@@ -253,6 +254,13 @@ export const typeDefs = gql`
   input PhotoOrderUpdateInput {
     photoId: ID!
     position: Int!
+  }
+
+  input CreateAppSettingInput {
+    applicationName: String!
+    lightboxMode: LightboxMode!
+    defaultDateFormat: DateFormat!
+    defaultSortOrder: SortOrder!
   }
 
   input UpdateAppSettingInput {
