@@ -364,7 +364,10 @@ export const resolvers = {
       return prisma.$transaction(transactions)
     },
 
-    createAppSetting: async (_, { data }, { prisma }) => {
+    createAppSetting: async (_, { data }, context) => {
+      const prisma = context?.prisma
+      if (!prisma) throw new Error("Prisma client not available in context")
+
       const existing = await prisma.appSetting.findFirst()
       if (existing)
         throw new Error("AppSetting already exists. Only one is allowed.")
