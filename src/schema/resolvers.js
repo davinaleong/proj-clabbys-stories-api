@@ -20,9 +20,15 @@ export const resolvers = {
     users: (_, __, { prisma }) => prisma.user.findMany(),
     user: (_, { id }, { prisma }) => prisma.user.findUnique({ where: { id } }),
 
-    galleries: (_, __, { prisma }) => prisma.gallery.findMany(),
+    galleries: (_, __, { prisma }) =>
+      prisma.gallery.findMany({
+        where: { deletedAt: null },
+      }),
+
     gallery: (_, { id }, { prisma }) =>
-      prisma.gallery.findUnique({ where: { id } }),
+      prisma.gallery.findUnique({
+        where: { id, deletedAt: null },
+      }),
 
     galleriesPaginated: async (_, { after, first = 12 }, { prisma }) => {
       const take = first + 1
@@ -36,7 +42,10 @@ export const resolvers = {
       }
 
       const galleries = await prisma.gallery.findMany({
-        where: cursorFilter,
+        where: {
+          deletedAt: null,
+          ...cursorFilter,
+        },
         take,
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       })
