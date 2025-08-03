@@ -16,6 +16,7 @@ generator client {
 enum GalleryStatus {
   DRAFT
   PUBLISHED
+  PUBLIC
 }
 
 enum LightboxMode {
