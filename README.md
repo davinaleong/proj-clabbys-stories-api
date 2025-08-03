@@ -1,211 +1,109 @@
-# 📸 proj-clabbys-stories-api
+# 📸 Clabby's Stories API
 
-The **GraphQL + REST API** backend for **Clabby's Stories** – a media-sharing platform for photo & video galleries.
-
-Built with **Node.js**, **Apollo Server (GraphQL)**, **Prisma ORM**, and **Cloudinary** for media hosting.
+This is the backend GraphQL API for **Clabby's Stories**, built with **Express**, **Apollo Server**, and **Prisma**. It supports user authentication, gallery and photo management, secure uploads to Cloudinary, and settings configuration.
 
 ---
 
-## 🚀 Features
+## 🚀 Getting Started
 
-✅ **GraphQL API** for users, galleries, photos, and admin logs  
-✅ **JWT-based authentication** for couples, admins & guests  
-✅ **Guest access** via unlockable galleries with temporary tokens  
-✅ **REST fallback for file uploads** (via `/api/upload`)  
-✅ **Prisma ORM** with PostgreSQL  
-✅ **Cloudinary integration** for photo & video hosting
+### 1. Clone the Repository
 
----
-
-## 🛠 Tech Stack
-
-- **Node.js** + **Express**
-- **Apollo Server (GraphQL)**
-- **Prisma ORM** + **PostgreSQL**
-- **JWT Authentication** (`jsonwebtoken`)
-- **Cloudinary** for media uploads
-- **dotenv** for env management
-- **Multer** for REST uploads
-
----
-
-## 📂 Project Structure
-
+```bash
+git clone https://github.com/your-username/proj-clabbys-stories-api.git
+cd proj-clabbys-stories-api
 ```
 
-src/
-app.js                 # Combined Apollo GraphQL + Express REST server
-schema/
-typeDefs.js          # GraphQL schema (SDL)
-resolvers.js         # Query, Mutation & nested resolvers
-routes/
-upload.js            # REST /api/upload endpoint
-config/
-cloudinary.js        # Cloudinary configuration
-
-```
-
----
-
-## ⚙️ Environment Variables
-
-Create a `.env` file at the project root:
-
-```env
-# =========================
-# 🌐 SERVER CONFIG
-# =========================
-PORT=4000
-NODE_ENV=development
-
-# =========================
-# 🔐 AUTH / JWT
-# =========================
-JWT_SECRET=your_jwt_secret
-GUEST_SECRET=your_guest_secret
-
-# =========================
-# 🗄️ DATABASE CONFIG (Prisma/PostgreSQL)
-# =========================
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
-
-# =========================
-# ☁️ CLOUDINARY CONFIG
-# =========================
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-CLOUDINARY_UPLOAD_FOLDER=uploads
-
-# =========================
-# 🏷️ OTHER OPTIONAL KEYS
-# =========================
-LOG_LEVEL=info
-APOLLO_PLAYGROUND=true
-```
-
----
-
-## ▶️ Running the API
-
-1️⃣ **Install dependencies**
+### 2. Install Dependencies
 
 ```bash
 npm install
 ```
 
-2️⃣ **Run Prisma migrations** (ensure PostgreSQL is running)
+### 3. Environment Setup
 
-```bash
-npx prisma migrate dev
-```
+Rename `.env.example` to `.env` and fill in the required values:
 
-3️⃣ **Start the server**
-
-```bash
-npm run dev
-```
-
-- GraphQL API: [http://localhost:4000/graphql](http://localhost:4000/graphql)
-- REST upload: `POST http://localhost:4000/api/upload`
-
----
-
-## 🔗 Example GraphQL Queries
-
-### Unlock a gallery (generate guest token)
-
-```graphql
-mutation {
-  unlockGallery(passphrase: "wedding-secret") {
-    token
-    gallery {
-      id
-      title
-    }
-  }
-}
-```
-
-### Fetch gallery with guest token
-
-```graphql
-query {
-  guestGallery(token: "JWT_TOKEN_HERE") {
-    id
-    title
-    photos {
-      imageUrl
-      caption
-    }
-  }
-}
+```env
+APP_NAME=...
+PORT=...
+NODE_ENV=...
+JWT_SECRET=...
+GUEST_SECRET=...
+DATABASE_URL=...
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
+CLOUDINARY_UPLOAD_FOLDER=...
+LOG_LEVEL=...
+APOLLO_PLAYGROUND=...
+INTROSPECTION=...
 ```
 
 ---
 
-## 📤 REST Upload Example
+## 🧪 Scripts
 
-`POST /api/upload` with `multipart/form-data`
+| Command                   | Description                              |
+| ------------------------- | ---------------------------------------- |
+| `npm run dev`             | Starts the development server            |
+| `npm run start`           | Starts the production server             |
+| `npm run prisma:generate` | Generates Prisma client                  |
+| `npm run prisma:migrate`  | Runs database migration (dev)            |
+| `npm run prisma:reset`    | Resets database and re-applies migration |
+| `npm run prisma:studio`   | Opens Prisma Studio                      |
+| `npm run prisma:seed`     | Runs seed script to populate data        |
+| `npm run db:push`         | Pushes Prisma schema to database         |
 
-```bash
-curl -X POST http://localhost:4000/api/upload \
-  -F "file=@/path/to/photo.jpg"
+---
+
+## 📦 Tech Stack
+
+- **Node.js** + **Express**
+- **GraphQL** via Apollo Server
+- **Prisma** ORM
+- **PostgreSQL** (or your preferred SQL database)
+- **Cloudinary** for image uploads
+- **Multer** + **Streamifier** for file handling
+- **JWT** for authentication
+- **dotenv** for environment config
+- **ExcelJS** for Excel export
+- **bcrypt** for password hashing
+- **CORS** for cross-origin support
+
+---
+
+## 📁 Project Structure
+
+```txt
+proj-clabbys-stories-api/
+├── prisma/             # Prisma schema, migrations, and seeders
+├── src/                # Express app, routes, GraphQL schema and resolvers
+├── .env.example        # Sample environment variables
+├── LICENSE             # MIT License
+├── package.json        # Project metadata and scripts
+└── README.md           # Project documentation
 ```
 
-Returns:
+---
 
-```json
-{
-  "url": "https://res.cloudinary.com/xxx/image/upload/abc.jpg",
-  "public_id": "uploads/abc",
-  "resource_type": "image",
-  "width": 1920,
-  "height": 1080
-}
-```
+## 🔒 Authentication
+
+JWT is used for user authentication. Passwords are securely hashed using `bcrypt`.
 
 ---
 
-## ✅ Available GraphQL Operations
+## ☁️ Uploads
 
-**Queries**
-
-- `users` → list all users
-- `galleries(userId)` → get galleries (all or user-specific)
-- `gallery(id)` → get a single gallery
-- `galleryByPassphrase(passphrase)` → find gallery by passphrase
-- `guestGallery(token)` → access guest gallery with JWT
-- `photos(galleryId)` → get photos for a gallery
-- `adminActivityLogs` → view admin logs
-- `couples` → list all couples
-
-**Mutations**
-
-- `createUser(data)` → add new user
-- `createGallery(data)` → add new gallery
-- `publishGallery(id)` → publish gallery
-- `unlockGallery(passphrase)` → unlock gallery & return guest token
-- `createPhoto(data)` → add new photo
-- `logAdminAction(adminId, action, details)` → log admin activity
-
----
-
-## 🛡 Authentication
-
-- **Couples/Admins** → Authenticated via `JWT_SECRET`
-- **Guests** → Use `unlockGallery` mutation → returns a `guest token` signed with `GUEST_SECRET`, valid for 2 hours
-
----
-
-## 📦 Deployment Notes
-
-- Ensure **DATABASE_URL** & **Cloudinary keys** are set on the server
-- Prisma migrations must run before first deploy
-- Consider enabling CORS for frontend usage
+Images are uploaded to Cloudinary via a REST endpoint (`/upload`) using `multer` in memory and streamed via `streamifier`.
 
 ---
 
 ## 📜 License
 
-MIT © Clabby’s Stories
+This project is licensed under the [MIT License](./LICENSE) © Davina Leong.
+
+---
+
+## ✨ Author
+
+**Davina Leong** — [GitHub](https://github.com/your-username)

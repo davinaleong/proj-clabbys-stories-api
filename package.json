@@ -14,8 +14,8 @@
     "db:push": "prisma db push"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Davina Leong",
+  "license": "MIT",
   "type": "module",
   "dependencies": {
     "@prisma/client": "^6.11.1",
