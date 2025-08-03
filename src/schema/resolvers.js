@@ -218,8 +218,6 @@ export const resolvers = {
         delete updateData.passphrase
       }
 
-      console.log(updateData)
-
       return prisma.gallery.update({
         where: { id },
         data: updateData,
