@@ -65,6 +65,54 @@ export const resolvers = {
       }
     },
 
+    archives: (_, __, { prisma }) =>
+      prisma.gallery.findMany({
+        where: { deletedAt: { not: null } },
+      }),
+
+    archive: (_, { id }, { prisma }) =>
+      prisma.gallery.findFirst({
+        where: {
+          id,
+          deletedAt: { not: null },
+        },
+      }),
+
+    archivesPaginated: async (_, { after, first = 12 }, { prisma }) => {
+      const take = first + 1
+      let cursorFilter = {}
+
+      if (after) {
+        const { createdAt, id } = decodeCursor(after)
+        cursorFilter = {
+          OR: [{ createdAt: { lt: createdAt } }, { createdAt, id: { lt: id } }],
+        }
+      }
+
+      const galleries = await prisma.gallery.findMany({
+        where: {
+          deletedAt: { not: null },
+          ...cursorFilter,
+        },
+        take,
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      })
+
+      const hasNextPage = galleries.length > first
+      const edges = galleries.slice(0, first).map((g) => ({
+        cursor: encodeCursor(g.createdAt, g.id),
+        node: g,
+      }))
+
+      return {
+        edges,
+        pageInfo: {
+          endCursor: edges.length ? edges[edges.length - 1].cursor : null,
+          hasNextPage,
+        },
+      }
+    },
+
     photos: (_, __, { prisma }) =>
       prisma.photo.findMany({ orderBy: { createdAt: "desc" } }),
 

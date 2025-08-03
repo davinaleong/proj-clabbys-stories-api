@@ -84,6 +84,11 @@ export const typeDefs = gql`
     gallery(id: ID!): Gallery
     galleriesPaginated(after: String, first: Int = 12): GalleryConnection!
 
+    # Archived Galleries
+    archives: [Gallery!]!
+    archive(id: ID!): Gallery
+    archivesPaginated(after: String, first: Int = 12): GalleryConnection!
+
     # Photos
     photos: [Photo!]!
     galleryPhotos(galleryId: ID!): [Photo!]!
