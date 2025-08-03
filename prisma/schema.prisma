@@ -77,7 +77,9 @@ model Gallery {
   photos         Photo[]
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+  deletedAt      DateTime?      // Soft delete timestamp (null means active)
 }
+
 
 model Photo {
   id          String    @id @default(uuid())

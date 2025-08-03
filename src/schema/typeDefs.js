@@ -60,6 +60,9 @@ export const typeDefs = gql`
     pageInfo: PageInfo!
   }
 
+  # ==============================
+  # ✅ ENUM QUERY SUPPORT
+  # ==============================
   type EnumValues {
     name: String!
   }
@@ -90,7 +93,7 @@ export const typeDefs = gql`
     appSettings: [AppSetting!]!
     appSetting(id: ID!): AppSetting
 
-    # App Settings Enum Values
+    # Enums as dynamic values
     galleryStatusEnum: EnumValuesResult!
     lightboxModeEnum: EnumValuesResult!
     sortOrderEnum: EnumValuesResult!
@@ -102,17 +105,19 @@ export const typeDefs = gql`
   # ==============================
   type Mutation {
     # Users
-    createUser(data: CreateUserInput!): User!
-    registerUser(data: RegisterUserInput!): User!
+    createUser(data: UserInput!): User!
+    registerUser(data: UserInput!): User!
     loginUser(email: String!, password: String!): UserAuthPayload!
     logoutUser: LogoutResponse!
 
     # Galleries
     createGallery(data: CreateGalleryInput!): Gallery!
     updateGallery(id: ID!, data: UpdateGalleryInput!): Gallery!
-    publishGallery(id: ID!): Gallery!
+    archiveGallery(id: ID!): Gallery!
+    restoreGallery(id: ID!): Gallery!
+    deleteGallery(id: ID!): Gallery!
 
-    # ✅ Gallery Password
+    # Gallery Password
     setGalleryPassphrase(id: ID!, passphrase: String!): Boolean!
     loginGallery(id: ID!, passphrase: String!): AuthPayload!
 
@@ -122,7 +127,7 @@ export const typeDefs = gql`
     assignPhotoToGallery(photoId: ID!, galleryId: ID!): Photo!
     updatePhoto(id: ID!, data: UpdatePhotoInput!): Photo!
 
-    # ✅ Photo ordering
+    # Photo ordering
     updatePhotoPosition(photoId: ID!, position: Int!): Photo!
     updatePhotoOrder(updates: [PhotoOrderUpdateInput!]!): [Photo!]!
 
@@ -132,7 +137,7 @@ export const typeDefs = gql`
   }
 
   # ==============================
-  # ✅ AUTH
+  # ✅ AUTH TYPES
   # ==============================
   type AuthPayload {
     token: String!
@@ -158,13 +163,13 @@ export const typeDefs = gql`
     description: String
     date: String
     status: GalleryStatus!
-    passphrase: String
     passphraseHash: String
-    photos: [Photo!]
+    photos: [Photo!]!
     owner: User
     ownerId: String
     createdAt: String
     updatedAt: String
+    deletedAt: String
   }
 
   type Photo {
@@ -185,7 +190,7 @@ export const typeDefs = gql`
     id: ID!
     name: String!
     email: String!
-    galleries: [Gallery!]
+    galleries: [Gallery!]!
   }
 
   # ==============================
@@ -204,19 +209,12 @@ export const typeDefs = gql`
   # ==============================
   # ✅ INPUT TYPES
   # ==============================
-  input CreateUserInput {
+  input UserInput {
     name: String!
     email: String!
     password: String!
   }
 
-  input RegisterUserInput {
-    name: String!
-    email: String!
-    password: String!
-  }
-
-  # ✅ Gallery Inputs
   input CreateGalleryInput {
     title: String!
     description: String
@@ -233,25 +231,23 @@ export const typeDefs = gql`
     status: GalleryStatus
   }
 
-  # ✅ Photo Inputs (must belong to a gallery)
   input CreatePhotoInput {
     galleryId: String!
     title: String
     description: String
     imageUrl: String!
     takenAt: String
-    fileSize: Int # optional, for validation
+    fileSize: Int
   }
 
   input UpdatePhotoInput {
-    galleryId: String # Optionally reassign to another gallery
+    galleryId: String
     title: String
     description: String
-    takenAt: String # ISO date string
+    takenAt: String
     position: Int
   }
 
-  # ✅ Batch photo order update
   input PhotoOrderUpdateInput {
     photoId: ID!
     position: Int!

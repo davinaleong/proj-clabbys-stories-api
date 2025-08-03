@@ -1,9 +1,9 @@
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
+import { v2 as cloudinary } from "cloudinary"
 import { env } from "./../config/env.js"
 import { GalleryStatus, LightboxMode, SortOrder, DateFormat } from "./enums.js"
-import lodash from "lodash"
-const { update } = lodash
+import extractPublicId from "./../helpers/extract-public-id.js"
 
 function encodeCursor(createdAt, id) {
   return Buffer.from(`${createdAt.toISOString()}::${id}`).toString("base64")
@@ -56,7 +56,6 @@ export const resolvers = {
       }
     },
 
-    // ✅ Photos
     photos: (_, __, { prisma }) =>
       prisma.photo.findMany({ orderBy: { createdAt: "desc" } }),
 
@@ -168,18 +167,18 @@ export const resolvers = {
       return { success: true, message: "Logged out successfully" }
     },
 
-    // ✅ Gallery Mutations
     createGallery: async (_, { data }, { prisma }) => {
       const { title, description, date, userId, passphrase, status } = data
 
-      let passphraseHash = null
-      if (passphrase) passphraseHash = await bcrypt.hash(passphrase, 10)
+      if (!userId) throw new Error("Missing userId")
 
-      let normalizedDate = null
-      if (date) {
-        const parsed = new Date(date)
-        if (!isNaN(parsed)) normalizedDate = parsed
-        else throw new Error("Invalid date format. Please use ISO 8601.")
+      const passphraseHash = passphrase
+        ? await bcrypt.hash(passphrase, 10)
+        : null
+
+      const normalizedDate = date ? new Date(date) : null
+      if (date && isNaN(normalizedDate)) {
+        throw new Error("Invalid date format. Please use ISO 8601.")
       }
 
       return prisma.gallery.create({
@@ -195,9 +194,8 @@ export const resolvers = {
     },
 
     updateGallery: async (_, { id, data }, { prisma }) => {
-      let updateData = { ...data }
+      const updateData = { ...data }
 
-      // ✅ Convert status string to enum
       if (data.status) {
         if (!Object.keys(GalleryStatus).includes(data.status)) {
           throw new Error(`Invalid status: ${data.status}`)
@@ -205,30 +203,74 @@ export const resolvers = {
         updateData.status = GalleryStatus[data.status]
       }
 
-      // ✅ Validate and parse date
       if (data.date) {
         const parsed = new Date(data.date)
-        if (!isNaN(parsed)) updateData.date = parsed
-        else throw new Error("Invalid date format. Please use ISO 8601.")
+        if (isNaN(parsed)) {
+          throw new Error("Invalid date format. Please use ISO 8601.")
+        }
+        updateData.date = parsed
       }
 
-      // ✅ Hash passphrase if provided
       if (data.passphrase) {
         updateData.passphraseHash = await bcrypt.hash(data.passphrase, 10)
         delete updateData.passphrase
       }
 
       return prisma.gallery.update({
-        where: { id },
+        where: { id, deletedAt: null },
         data: updateData,
       })
     },
 
-    publishGallery: (_, { id }, { prisma }) =>
-      prisma.gallery.update({
+    archiveGallery: async (_, { id }, { prisma }) => {
+      const gallery = await prisma.gallery.findUnique({ where: { id } })
+      if (!gallery) throw new Error("Gallery not found")
+      if (gallery.deletedAt) throw new Error("Gallery already archived")
+
+      return prisma.gallery.update({
         where: { id },
-        data: { status: "PUBLISHED" },
-      }),
+        data: { deletedAt: new Date() },
+      })
+    },
+
+    restoreGallery: async (_, { id }, { prisma }) => {
+      const gallery = await prisma.gallery.findUnique({ where: { id } })
+      if (!gallery) throw new Error("Gallery not found")
+      if (!gallery.deletedAt) throw new Error("Gallery is not archived")
+
+      return prisma.gallery.update({
+        where: { id },
+        data: { deletedAt: null },
+      })
+    },
+
+    deleteGallery: async (_, { id }, { prisma }) => {
+      const gallery = await prisma.gallery.findUnique({
+        where: { id },
+        include: { photos: true },
+      })
+
+      if (!gallery) throw new Error("Gallery not found")
+      if (!gallery.deletedAt) {
+        throw new Error("Only archived galleries can be permanently deleted")
+      }
+
+      for (const photo of gallery.photos) {
+        if (photo.imageUrl?.includes("cloudinary.com")) {
+          const publicId = extractPublicId(photo.imageUrl)
+          if (publicId) {
+            try {
+              await cloudinary.uploader.destroy(publicId)
+            } catch (err) {
+              console.error(`Cloudinary deletion failed for ${publicId}:`, err)
+            }
+          }
+        }
+      }
+
+      await prisma.photo.deleteMany({ where: { galleryId: id } })
+      return prisma.gallery.delete({ where: { id } })
+    },
 
     setGalleryPassphrase: async (_, { id, passphrase }, { prisma }) => {
       const gallery = await prisma.gallery.findUnique({ where: { id } })
@@ -244,8 +286,9 @@ export const resolvers = {
 
     loginGallery: async (_, { id, passphrase }, { prisma }) => {
       const gallery = await prisma.gallery.findUnique({ where: { id } })
-      if (!gallery || !gallery.passphraseHash)
+      if (!gallery || !gallery.passphraseHash) {
         throw new Error("Gallery not initialized for passphrase login")
+      }
 
       const valid = await bcrypt.compare(passphrase, gallery.passphraseHash)
       if (!valid) throw new Error("Invalid passphrase")
@@ -257,23 +300,22 @@ export const resolvers = {
       return { token, gallery }
     },
 
-    // ✅ Photos
     createPhoto: async (_, { data }, { prisma }) => {
       const { takenAt, galleryId, imageUrl, fileSize, ...rest } = data
       if (!galleryId) throw new Error("Photos must belong to a gallery.")
 
       const allowedExt = /\.(jpg|jpeg|png|gif|webp)$/i
-      if (!allowedExt.test(imageUrl))
+      if (!allowedExt.test(imageUrl)) {
         throw new Error("Only JPG, PNG, GIF, WEBP allowed.")
+      }
 
-      if (fileSize && fileSize > 5 * 1024 * 1024)
-        throw new Error(`File exceeds 5MB limit.`)
+      if (fileSize && fileSize > 5 * 1024 * 1024) {
+        throw new Error("File exceeds 5MB limit.")
+      }
 
-      let normalizedTakenAt = null
-      if (takenAt) {
-        const parsed = new Date(takenAt)
-        if (!isNaN(parsed)) normalizedTakenAt = parsed
-        else throw new Error("Invalid takenAt date format")
+      const normalizedTakenAt = takenAt ? new Date(takenAt) : null
+      if (takenAt && isNaN(normalizedTakenAt)) {
+        throw new Error("Invalid takenAt date format")
       }
 
       const maxPosition = await prisma.photo.aggregate({
@@ -343,15 +385,16 @@ export const resolvers = {
     },
 
     updatePhoto: async (_, { id, data }, { prisma }) => {
-      let updateData = { ...data }
+      const updateData = { ...data }
 
       if (data.takenAt) {
         const parsed = new Date(data.takenAt)
-        if (!isNaN(parsed)) updateData.takenAt = parsed
-        else
+        if (isNaN(parsed)) {
           throw new Error(
             "Invalid takenAt date format. Use ISO 8601 (e.g., 2025-07-20T12:00:00.000Z)."
           )
+        }
+        updateData.takenAt = parsed
       }
 
       return prisma.photo.update({
@@ -381,33 +424,14 @@ export const resolvers = {
       if (existing)
         throw new Error("AppSetting already exists. Only one is allowed.")
 
-      return prisma.appSetting.create({
-        data: {
-          applicationName: data.applicationName,
-          lightboxMode: data.lightboxMode,
-          defaultDateFormat: data.defaultDateFormat,
-          defaultSortOrder: data.defaultSortOrder,
-        },
-      })
+      return prisma.appSetting.create({ data })
     },
 
-    updateAppSetting: async (_, { id, data }, { prisma }) => {
-      return prisma.appSetting.update({
+    updateAppSetting: async (_, { id, data }, { prisma }) =>
+      prisma.appSetting.update({
         where: { id },
-        data: {
-          ...(data.applicationName && {
-            applicationName: data.applicationName,
-          }),
-          ...(data.lightboxMode && { lightboxMode: data.lightboxMode }),
-          ...(data.defaultSortOrder && {
-            defaultSortOrder: data.defaultSortOrder,
-          }),
-          ...(data.defaultDateFormat && {
-            defaultDateFormat: data.defaultDateFormat,
-          }),
-        },
-      })
-    },
+        data,
+      }),
   },
 
   User: {
@@ -416,10 +440,11 @@ export const resolvers = {
   },
 
   Gallery: {
-    owner: (parent, _, { prisma }) => {
-      if (!parent.ownerId) return null
-      return prisma.user.findUnique({ where: { id: parent.ownerId } })
-    },
+    owner: (parent, _, { prisma }) =>
+      parent.ownerId
+        ? prisma.user.findUnique({ where: { id: parent.ownerId } })
+        : null,
+
     photos: (parent, _, { prisma }) =>
       prisma.photo.findMany({
         where: { galleryId: parent.id },
