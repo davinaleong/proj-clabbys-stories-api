@@ -225,9 +225,7 @@ export const resolvers = {
     },
 
     createGallery: async (_, { data }, { prisma }) => {
-      const { title, description, date, userId, passphrase, status } = data
-
-      if (!userId) throw new Error("Missing userId")
+      const { title, description, date, passphrase, status } = data
 
       const passphraseHash = passphrase
         ? await bcrypt.hash(passphrase, 10)
@@ -243,7 +241,6 @@ export const resolvers = {
           title,
           description,
           date: normalizedDate,
-          userId,
           passphraseHash,
           status: status || "DRAFT",
         },
@@ -497,11 +494,6 @@ export const resolvers = {
   },
 
   Gallery: {
-    owner: (parent, _, { prisma }) =>
-      parent.ownerId
-        ? prisma.user.findUnique({ where: { id: parent.ownerId } })
-        : null,
-
     photos: (parent, _, { prisma }) =>
       prisma.photo.findMany({
         where: { galleryId: parent.id },
