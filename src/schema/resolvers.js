@@ -21,31 +21,28 @@ export const resolvers = {
     user: (_, { id }, { prisma }) => prisma.user.findUnique({ where: { id } }),
 
     galleries: (_, __, { prisma }) =>
-      prisma.gallery.findMany({
-        where: { deletedAt: null },
-      }),
+      prisma.gallery.findMany({ where: { deletedAt: null } }),
 
-    gallery: (_, { id }, { prisma }) =>
-      prisma.gallery.findUnique({
-        where: { id, deletedAt: null },
-      }),
+    // findUnique cannot take non-unique fields; use findFirst
+    gallery: async (_, { id }, { prisma }) =>
+      prisma.gallery.findFirst({ where: { id, deletedAt: null } }),
 
     galleriesPaginated: async (_, { after, first = 12 }, { prisma }) => {
       const take = first + 1
       let cursorFilter = {}
 
       if (after) {
-        const { createdAt, id } = decodeCursor(after)
+        const { createdAt, id: cursorId } = decodeCursor(after)
         cursorFilter = {
-          OR: [{ createdAt: { lt: createdAt } }, { createdAt, id: { lt: id } }],
+          OR: [
+            { createdAt: { lt: createdAt } },
+            { createdAt, id: { lt: cursorId } },
+          ],
         }
       }
 
       const galleries = await prisma.gallery.findMany({
-        where: {
-          deletedAt: null,
-          ...cursorFilter,
-        },
+        where: { deletedAt: null, ...cursorFilter },
         take,
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       })
@@ -66,34 +63,27 @@ export const resolvers = {
     },
 
     archives: (_, __, { prisma }) =>
-      prisma.gallery.findMany({
-        where: { deletedAt: { not: null } },
-      }),
+      prisma.gallery.findMany({ where: { deletedAt: { not: null } } }),
 
     archive: (_, { id }, { prisma }) =>
-      prisma.gallery.findFirst({
-        where: {
-          id,
-          deletedAt: { not: null },
-        },
-      }),
+      prisma.gallery.findFirst({ where: { id, deletedAt: { not: null } } }),
 
     archivesPaginated: async (_, { after, first = 12 }, { prisma }) => {
       const take = first + 1
       let cursorFilter = {}
 
       if (after) {
-        const { createdAt, id } = decodeCursor(after)
+        const { createdAt, id: cursorId } = decodeCursor(after)
         cursorFilter = {
-          OR: [{ createdAt: { lt: createdAt } }, { createdAt, id: { lt: id } }],
+          OR: [
+            { createdAt: { lt: createdAt } },
+            { createdAt, id: { lt: cursorId } },
+          ],
         }
       }
 
       const galleries = await prisma.gallery.findMany({
-        where: {
-          deletedAt: { not: null },
-          ...cursorFilter,
-        },
+        where: { deletedAt: { not: null }, ...cursorFilter },
         take,
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       })
@@ -127,9 +117,12 @@ export const resolvers = {
       let cursorFilter = {}
 
       if (after) {
-        const { createdAt, id } = decodeCursor(after)
+        const { createdAt, id: cursorId } = decodeCursor(after)
         cursorFilter = {
-          OR: [{ createdAt: { lt: createdAt } }, { createdAt, id: { lt: id } }],
+          OR: [
+            { createdAt: { lt: createdAt } },
+            { createdAt, id: { lt: cursorId } },
+          ],
         }
       }
 
@@ -176,57 +169,41 @@ export const resolvers = {
     createUser: async (_, { data }, { prisma }) => {
       const existing = await prisma.user.findFirst()
       if (existing) throw new Error("User already exists. Only one allowed.")
-
       const { name, email, password } = data
       const passwordHash = await bcrypt.hash(password, 10)
-
-      return prisma.user.create({
-        data: {
-          name,
-          email,
-          passwordHash,
-        },
-      })
+      return prisma.user.create({ data: { name, email, passwordHash } })
     },
 
     registerUser: async (_, { data }, { prisma }) => {
       const { name, email, password } = data
       const existing = await prisma.user.findUnique({ where: { email } })
       if (existing) throw new Error("User already exists")
-
       const passwordHash = await bcrypt.hash(password, 10)
-      return prisma.user.create({
-        data: { name, email, passwordHash },
-      })
+      return prisma.user.create({ data: { name, email, passwordHash } })
     },
 
     loginUser: async (_, { email, password }, { prisma }) => {
       const user = await prisma.user.findUnique({ where: { email } })
       if (!user) throw new Error("Invalid credentials")
-
       const valid = await bcrypt.compare(password, user.passwordHash)
       if (!valid) throw new Error("Invalid credentials")
-
       const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, {
         expiresIn: "7d",
       })
-
       return { token, user }
     },
 
     logoutUser: async (_, __, { res }) => {
-      res.clearCookie("token", {
+      res?.clearCookie?.("token", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "Strict",
       })
-
       return { success: true, message: "Logged out successfully" }
     },
 
     createGallery: async (_, { data }, { prisma }) => {
       const { title, description, date, passphrase, status } = data
-
       const passphraseHash = passphrase
         ? await bcrypt.hash(passphrase, 10)
         : null
@@ -248,6 +225,12 @@ export const resolvers = {
     },
 
     updateGallery: async (_, { id, data }, { prisma }) => {
+      // Pre-check: ensure not archived
+      const existing = await prisma.gallery.findUnique({ where: { id } })
+      if (!existing) throw new Error("Gallery not found")
+      if (existing.deletedAt)
+        throw new Error("Cannot update an archived gallery")
+
       const updateData = { ...data }
 
       if (data.status) {
@@ -259,9 +242,8 @@ export const resolvers = {
 
       if (data.date) {
         const parsed = new Date(data.date)
-        if (isNaN(parsed)) {
+        if (isNaN(parsed))
           throw new Error("Invalid date format. Please use ISO 8601.")
-        }
         updateData.date = parsed
       }
 
@@ -270,17 +252,13 @@ export const resolvers = {
         delete updateData.passphrase
       }
 
-      return prisma.gallery.update({
-        where: { id, deletedAt: null },
-        data: updateData,
-      })
+      return prisma.gallery.update({ where: { id }, data: updateData })
     },
 
     archiveGallery: async (_, { id }, { prisma }) => {
       const gallery = await prisma.gallery.findUnique({ where: { id } })
       if (!gallery) throw new Error("Gallery not found")
       if (gallery.deletedAt) throw new Error("Gallery already archived")
-
       return prisma.gallery.update({
         where: { id },
         data: { deletedAt: new Date() },
@@ -291,11 +269,7 @@ export const resolvers = {
       const gallery = await prisma.gallery.findUnique({ where: { id } })
       if (!gallery) throw new Error("Gallery not found")
       if (!gallery.deletedAt) throw new Error("Gallery is not archived")
-
-      return prisma.gallery.update({
-        where: { id },
-        data: { deletedAt: null },
-      })
+      return prisma.gallery.update({ where: { id }, data: { deletedAt: null } })
     },
 
     deleteGallery: async (_, { id }, { prisma }) => {
@@ -303,11 +277,9 @@ export const resolvers = {
         where: { id },
         include: { photos: true },
       })
-
       if (!gallery) throw new Error("Gallery not found")
-      if (!gallery.deletedAt) {
+      if (!gallery.deletedAt)
         throw new Error("Only archived galleries can be permanently deleted")
-      }
 
       for (const photo of gallery.photos) {
         if (photo.imageUrl?.includes("cloudinary.com")) {
@@ -329,7 +301,6 @@ export const resolvers = {
     setGalleryPassphrase: async (_, { id, passphrase }, { prisma }) => {
       const gallery = await prisma.gallery.findUnique({ where: { id } })
       if (!gallery) throw new Error("Gallery not found")
-
       const hash = await bcrypt.hash(passphrase, 10)
       await prisma.gallery.update({
         where: { id },
@@ -343,6 +314,8 @@ export const resolvers = {
       if (!gallery || !gallery.passphraseHash) {
         throw new Error("Gallery not initialized for passphrase login")
       }
+      if (gallery.deletedAt)
+        throw new Error("Archived gallery cannot be accessed")
 
       const valid = await bcrypt.compare(passphrase, gallery.passphraseHash)
       if (!valid) throw new Error("Invalid passphrase")
@@ -350,7 +323,6 @@ export const resolvers = {
       const token = jwt.sign({ galleryId: gallery.id }, env.JWT_SECRET, {
         expiresIn: "7d",
       })
-
       return { token, gallery }
     },
 
@@ -358,19 +330,22 @@ export const resolvers = {
       const { takenAt, galleryId, imageUrl, fileSize, ...rest } = data
       if (!galleryId) throw new Error("Photos must belong to a gallery.")
 
-      const allowedExt = /\.(jpg|jpeg|png|gif|webp)$/i
-      if (!allowedExt.test(imageUrl)) {
-        throw new Error("Only JPG, PNG, GIF, WEBP allowed.")
-      }
+      const gallery = await prisma.gallery.findUnique({
+        where: { id: galleryId },
+      })
+      if (!gallery) throw new Error("Gallery not found")
+      if (gallery.deletedAt)
+        throw new Error("Cannot add photos to an archived gallery")
 
-      if (fileSize && fileSize > 5 * 1024 * 1024) {
+      const allowedExt = /\.(jpg|jpeg|png|gif|webp)$/i
+      if (!allowedExt.test(imageUrl))
+        throw new Error("Only JPG, PNG, GIF, WEBP allowed.")
+      if (fileSize && fileSize > 5 * 1024 * 1024)
         throw new Error("File exceeds 5MB limit.")
-      }
 
       const normalizedTakenAt = takenAt ? new Date(takenAt) : null
-      if (takenAt && isNaN(normalizedTakenAt)) {
+      if (takenAt && isNaN(normalizedTakenAt))
         throw new Error("Invalid takenAt date format")
-      }
 
       const maxPosition = await prisma.photo.aggregate({
         where: { galleryId },
@@ -399,11 +374,21 @@ export const resolvers = {
         if (!photo.galleryId)
           throw new Error("Each photo must have a galleryId.")
 
+        const gallery = await prisma.gallery.findUnique({
+          where: { id: photo.galleryId },
+        })
+        if (!gallery) throw new Error("Gallery not found")
+        if (gallery.deletedAt)
+          throw new Error("Cannot add photos to an archived gallery")
+
         if (!allowedExt.test(photo.imageUrl))
           throw new Error(`Unsupported file: ${photo.imageUrl}`)
-
         if (photo.fileSize && photo.fileSize > 5 * 1024 * 1024)
           throw new Error(`File ${photo.imageUrl} exceeds 5MB limit.`)
+
+        const normalizedTakenAt = photo.takenAt ? new Date(photo.takenAt) : null
+        if (photo.takenAt && isNaN(normalizedTakenAt))
+          throw new Error(`Invalid takenAt date: ${photo.takenAt}`)
 
         const maxPosition = await prisma.photo.aggregate({
           where: { galleryId: photo.galleryId },
@@ -412,7 +397,11 @@ export const resolvers = {
         const nextPosition = (maxPosition._max.position || 0) + 1
 
         const p = await prisma.photo.create({
-          data: { ...photo, position: nextPosition },
+          data: {
+            ...photo,
+            takenAt: normalizedTakenAt,
+            position: nextPosition,
+          },
         })
         createdPhotos.push(p)
       }
@@ -425,6 +414,8 @@ export const resolvers = {
         where: { id: galleryId },
       })
       if (!gallery) throw new Error("Gallery not found")
+      if (gallery.deletedAt)
+        throw new Error("Cannot assign to an archived gallery")
 
       const maxPosition = await prisma.photo.aggregate({
         where: { galleryId },
@@ -440,7 +431,6 @@ export const resolvers = {
 
     updatePhoto: async (_, { id, data }, { prisma }) => {
       const updateData = { ...data }
-
       if (data.takenAt) {
         const parsed = new Date(data.takenAt)
         if (isNaN(parsed)) {
@@ -450,18 +440,11 @@ export const resolvers = {
         }
         updateData.takenAt = parsed
       }
-
-      return prisma.photo.update({
-        where: { id },
-        data: updateData,
-      })
+      return prisma.photo.update({ where: { id }, data: updateData })
     },
 
     updatePhotoPosition: async (_, { photoId, position }, { prisma }) =>
-      prisma.photo.update({
-        where: { id: photoId },
-        data: { position },
-      }),
+      prisma.photo.update({ where: { id: photoId }, data: { position } }),
 
     updatePhotoOrder: async (_, { updates }, { prisma }) => {
       const transactions = updates.map((u) =>
@@ -474,18 +457,14 @@ export const resolvers = {
     },
 
     createAppSetting: async (_, { data }, { prisma }) => {
-      const existing = await prisma?.appSetting.findFirst()
+      const existing = await prisma.appSetting.findFirst()
       if (existing)
         throw new Error("AppSetting already exists. Only one is allowed.")
-
       return prisma.appSetting.create({ data })
     },
 
     updateAppSetting: async (_, { id, data }, { prisma }) =>
-      prisma.appSetting.update({
-        where: { id },
-        data,
-      }),
+      prisma.appSetting.update({ where: { id }, data }),
   },
 
   User: {
@@ -499,6 +478,8 @@ export const resolvers = {
         where: { galleryId: parent.id },
         orderBy: { position: "asc" },
       }),
+    // Make sure your GraphQL schema includes `isLocked: Boolean!`
+    isLocked: (parent) => Boolean(parent.passphraseHash),
   },
 
   Photo: {

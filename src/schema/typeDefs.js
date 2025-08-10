@@ -91,8 +91,11 @@ export const typeDefs = gql`
 
     # Photos
     photos: [Photo!]!
-    galleryPhotos(galleryId: ID!): [Photo!]!
-    photosPaginated(after: String, first: Int = 12): PhotoConnection!
+    photosPaginated(
+      galleryId: ID!
+      after: String
+      first: Int = 24
+    ): PhotoConnection!
 
     # App Settings
     appSettings: [AppSetting!]!
@@ -168,8 +171,7 @@ export const typeDefs = gql`
     description: String
     date: String
     status: GalleryStatus!
-    passphrase: String
-    passphraseHash: String
+    isLocked: Boolean! # NEW: computed on the server from passphraseHash
     photos: [Photo!]
     createdAt: String
     updatedAt: String
@@ -223,7 +225,6 @@ export const typeDefs = gql`
     title: String!
     description: String
     date: String
-    passphrase: String
     status: GalleryStatus = DRAFT
   }
 
@@ -231,7 +232,6 @@ export const typeDefs = gql`
     title: String
     description: String
     date: String
-    passphrase: String
     status: GalleryStatus
   }
 
