@@ -25,8 +25,9 @@ export const resolvers = {
         where: { deletedAt: null },
       }),
 
+    // FIX: use findFirst to allow deletedAt filter
     gallery: (_, { id }, { prisma }) =>
-      prisma.gallery.findUnique({
+      prisma.gallery.findFirst({
         where: { id, deletedAt: null },
       }),
 
@@ -242,6 +243,11 @@ export const resolvers = {
     },
 
     updateGallery: async (_, { id, data }, { prisma }) => {
+      const gallery = await prisma.gallery.findUnique({ where: { id } })
+      if (!gallery) throw new Error("Gallery not found")
+      if (gallery.deletedAt)
+        throw new Error("Cannot update an archived gallery")
+
       const updateData = { ...data }
 
       if (data.status) {
@@ -264,8 +270,9 @@ export const resolvers = {
         delete updateData.passphrase
       }
 
+      // FIX: update.where must be unique-only
       return prisma.gallery.update({
-        where: { id, deletedAt: null },
+        where: { id },
         data: updateData,
       })
     },
@@ -467,8 +474,98 @@ export const resolvers = {
       return prisma.$transaction(transactions)
     },
 
+    deletePhoto: async (_, { id }, { prisma }) => {
+      const existing = await prisma.photo.findUnique({
+        where: { id },
+        select: { id: true, galleryId: true, position: true, imageUrl: true },
+      })
+      if (!existing) throw new Error("Photo not found")
+
+      // (Optional) best-effort remote deletion if using Cloudinary
+      if (existing.imageUrl?.includes("cloudinary.com")) {
+        const publicId = extractPublicId(existing.imageUrl)
+        if (publicId) {
+          try {
+            await cloudinary.uploader.destroy(publicId)
+          } catch (err) {
+            console.error(`Cloudinary deletion failed for ${publicId}:`, err)
+          }
+        }
+      }
+
+      await prisma.$transaction(async (tx) => {
+        // 1) Remove the photo
+        await tx.photo.delete({ where: { id } })
+
+        // 2) Resequence remaining photos in the same gallery
+        const remaining = await tx.photo.findMany({
+          where: { galleryId: existing.galleryId },
+          orderBy: { position: "asc" },
+          select: { id: true },
+        })
+
+        for (let i = 0; i < remaining.length; i++) {
+          await tx.photo.update({
+            where: { id: remaining[i].id },
+            data: { position: i },
+          })
+        }
+      })
+
+      return {
+        id: existing.id,
+        galleryId: existing.galleryId,
+        position: existing.position,
+      }
+    },
+
+    movePhotoToGallery: async (_, { photoId, toGalleryId }, { prisma }) => {
+      const src = await prisma.photo.findUnique({
+        where: { id: photoId },
+        select: { id: true, galleryId: true, position: true },
+      })
+      if (!src) throw new Error("Photo not found")
+
+      if (src.galleryId === toGalleryId) {
+        return { id: src.id, galleryId: src.galleryId, position: src.position }
+      }
+
+      const moved = await prisma.$transaction(async (tx) => {
+        // a) Determine next position in target
+        const agg = await tx.photo.aggregate({
+          where: { galleryId: toGalleryId },
+          _max: { position: true },
+        })
+        const nextPos = (agg._max.position ?? -1) + 1
+
+        // b) Move photo (change galleryId and position)
+        const updated = await tx.photo.update({
+          where: { id: photoId },
+          data: { galleryId: toGalleryId, position: nextPos },
+          select: { id: true, galleryId: true, position: true },
+        })
+
+        // c) Compact positions in source gallery
+        const remaining = await tx.photo.findMany({
+          where: { galleryId: src.galleryId },
+          orderBy: { position: "asc" },
+          select: { id: true },
+        })
+        for (let i = 0; i < remaining.length; i++) {
+          await tx.photo.update({
+            where: { id: remaining[i].id },
+            data: { position: i },
+          })
+        }
+
+        return updated
+      })
+
+      return moved
+    },
+
     createAppSetting: async (_, { data }, { prisma }) => {
-      const existing = await prisma?.appSetting.findFirst()
+      const existing = await prisma.appSetting.findFirst()
       if (existing)
         throw new Error("AppSetting already exists. Only one is allowed.")
 

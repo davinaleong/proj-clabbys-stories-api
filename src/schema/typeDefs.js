@@ -130,6 +130,8 @@ export const typeDefs = gql`
     createPhotos(data: [CreatePhotoInput!]!): [Photo!]!
     assignPhotoToGallery(photoId: ID!, galleryId: ID!): Photo!
     updatePhoto(id: ID!, data: UpdatePhotoInput!): Photo!
+    deletePhoto(id: ID!): Photo!
+    movePhotoToGallery(photoId: ID!, toGalleryId: ID!): Photo!
 
     # Photo ordering
     updatePhotoPosition(photoId: ID!, position: Int!): Photo!
