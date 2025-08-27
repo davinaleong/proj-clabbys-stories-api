@@ -91,7 +91,6 @@ export const typeDefs = gql`
 
     # Photos
     photos: [Photo!]!
-    galleryPhotos(galleryId: ID!): [Photo!]!
     photosPaginated(after: String, first: Int = 12): PhotoConnection!
 
     # App Settings

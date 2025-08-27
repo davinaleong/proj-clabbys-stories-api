@@ -116,12 +116,6 @@ export const resolvers = {
     photos: (_, __, { prisma }) =>
       prisma.photo.findMany({ orderBy: { createdAt: "desc" } }),
 
-    galleryPhotos: (_, { galleryId }, { prisma }) =>
-      prisma.photo.findMany({
-        where: { galleryId },
-        orderBy: { position: "asc" },
-      }),
-
     photosPaginated: async (_, { after, first = 12 }, { prisma }) => {
       const take = first + 1
       let cursorFilter = {}
