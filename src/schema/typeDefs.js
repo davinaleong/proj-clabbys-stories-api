@@ -124,7 +124,7 @@ export const typeDefs = gql`
     # Gallery Password
     setGalleryPassphrase(id: ID!, passphrase: String!): Boolean!
     loginGallery(id: ID!, passphrase: String!): AuthPayload!
-
+    verifyGalleryPin(id: ID!, pin: String!): VerifyGalleryPinResponse! # ✅ New
     # Photos
     createPhoto(data: CreatePhotoInput!): Photo!
     createPhotos(data: [CreatePhotoInput!]!): [Photo!]!
@@ -160,6 +160,13 @@ export const typeDefs = gql`
     message: String!
   }
 
+  # ✅ New: Verify Gallery Pin response
+  type VerifyGalleryPinResponse {
+    ok: Boolean!
+    token: String
+    message: String
+  }
+
   # ==============================
   # ✅ CORE TYPES
   # ==============================
@@ -169,8 +176,7 @@ export const typeDefs = gql`
     description: String
     date: String
     status: GalleryStatus!
-    passphrase: String
-    passphraseHash: String
+    hasPassphrase: Boolean!
     photos: [Photo!]
     createdAt: String
     updatedAt: String

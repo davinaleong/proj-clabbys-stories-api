@@ -355,6 +355,44 @@ export const resolvers = {
       return { token, gallery }
     },
 
+    verifyGalleryPin: async (_, { id, pin }, { prisma }) => {
+      try {
+        // find only non-archived galleries
+        const gallery = await prisma.gallery.findFirst({
+          where: { id, deletedAt: null },
+        })
+
+        if (!gallery) {
+          return { ok: false, token: null, message: "Gallery not found." }
+        }
+
+        if (!gallery.passphraseHash) {
+          return {
+            ok: false,
+            token: null,
+            message: "This gallery does not require a passphrase.",
+          }
+        }
+
+        const isValid = await bcrypt.compare(pin, gallery.passphraseHash)
+        if (!isValid) {
+          return { ok: false, token: null, message: "Invalid passphrase." }
+        }
+
+        // issue short-lived token for gallery access
+        const token = jwt.sign(
+          { galleryId: gallery.id, scope: "gallery" },
+          env.JWT_SECRET,
+          { expiresIn: "2h" }
+        )
+
+        return { ok: true, token, message: "Access granted." }
+      } catch (err) {
+        console.error("verifyGalleryPin error:", err)
+        return { ok: false, token: null, message: "Unexpected error occurred." }
+      }
+    },
+
     createPhoto: async (_, { data }, { prisma }) => {
       const { takenAt, galleryId, imageUrl, fileSize, ...rest } = data
       if (!galleryId) throw new Error("Photos must belong to a gallery.")
@@ -590,6 +628,17 @@ export const resolvers = {
         where: { galleryId: parent.id },
         orderBy: { position: "asc" },
       }),
+    hasPassphrase: async (parent, _, { prisma }) => {
+      // If parent came from a selection that already included passphraseHash (it shouldn't), avoid leaking:
+      if (Object.prototype.hasOwnProperty.call(parent, "passphraseHash")) {
+        return !!parent.passphraseHash
+      }
+      const row = await prisma.gallery.findUnique({
+        where: { id: parent.id },
+        select: { passphraseHash: true },
+      })
+      return !!row?.passphraseHash
+    },
   },
 
   Photo: {
