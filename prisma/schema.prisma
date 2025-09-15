@@ -22,6 +22,7 @@ enum GalleryStatus {
 enum LightboxMode {
   BLACK
   BLURRED
+  SLIDESHOW
 }
 
 enum DateFormat {
@@ -68,6 +69,7 @@ model Gallery {
   passphraseHash String?        // Optional password for guest access
   status         GalleryStatus  @default(DRAFT)
   photos         Photo[]
+  lightboxMode   LightboxMode   @default(BLACK)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   deletedAt      DateTime?      // Soft delete timestamp (null means active)
@@ -96,7 +98,6 @@ model Photo {
 model AppSetting {
   id                String       @id @default(uuid())
   applicationName   String       // App Name, e.g. "Clabby's Stories"
-  lightboxMode      LightboxMode @default(BLACK)
   defaultDateFormat DateFormat   @default(EEE_D_MMM_YYYY)
   defaultSortOrder  SortOrder    @default(NEWEST)
 

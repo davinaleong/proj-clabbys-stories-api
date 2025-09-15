@@ -5,7 +5,6 @@ export async function seedSetting(
   prisma,
   {
     applicationName = "Clabby's Stories",
-    lightboxMode = "BLACK",
     defaultDateFormat = "EEE_D_MMM_YYYY",
     defaultSortOrder = "NEWEST",
   } = {}
