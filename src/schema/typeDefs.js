@@ -1,3 +1,4 @@
+// typeDefs.js
 import { gql } from "apollo-server-express"
 
 export const typeDefs = gql`
@@ -7,6 +8,7 @@ export const typeDefs = gql`
   enum LightboxMode {
     BLACK
     BLURRED
+    SLIDESHOW
   }
 
   enum SortOrder {
@@ -23,13 +25,13 @@ export const typeDefs = gql`
   }
 
   enum DateFormat {
-    EEE_D_MMM_YYYY # Sun, 20 Jul 2025
-    EEEE_D_MMM_YYYY # Sunday, 20 Jul 2025
-    EEEE_D_MMMM_YYYY # Sunday, 20 July 2025
-    D_MMM_YYYY # 20 Jul 2025
-    D_MMMM_YYYY # 20 July 2025
-    D_MMM # 20 Jul
-    D_MMMM # 20 July
+    EEE_D_MMM_YYYY
+    EEEE_D_MMM_YYYY
+    EEEE_D_MMMM_YYYY
+    D_MMM_YYYY
+    D_MMMM_YYYY
+    D_MMM
+    D_MMMM
   }
 
   # ==============================
@@ -97,7 +99,7 @@ export const typeDefs = gql`
     appSettings: [AppSetting!]!
     appSetting(id: ID!): AppSetting
 
-    # Enums as dynamic values
+    # Enums
     galleryStatusEnum: EnumValuesResult!
     lightboxModeEnum: EnumValuesResult!
     sortOrderEnum: EnumValuesResult!
@@ -124,7 +126,8 @@ export const typeDefs = gql`
     # Gallery Password
     setGalleryPassphrase(id: ID!, passphrase: String!): Boolean!
     loginGallery(id: ID!, passphrase: String!): AuthPayload!
-    verifyGalleryPin(id: ID!, pin: String!): VerifyGalleryPinResponse! # ✅ New
+    verifyGalleryPin(id: ID!, pin: String!): VerifyGalleryPinResponse!
+
     # Photos
     createPhoto(data: CreatePhotoInput!): Photo!
     createPhotos(data: [CreatePhotoInput!]!): [Photo!]!
@@ -160,7 +163,6 @@ export const typeDefs = gql`
     message: String!
   }
 
-  # ✅ New: Verify Gallery Pin response
   type VerifyGalleryPinResponse {
     ok: Boolean!
     token: String
@@ -176,6 +178,7 @@ export const typeDefs = gql`
     description: String
     date: String
     status: GalleryStatus!
+    lightboxMode: LightboxMode! # ✅ NEW
     hasPassphrase: Boolean!
     photos: [Photo!]
     createdAt: String
@@ -210,7 +213,6 @@ export const typeDefs = gql`
   type AppSetting {
     id: ID!
     applicationName: String!
-    lightboxMode: LightboxMode!
     defaultDateFormat: DateFormat!
     defaultSortOrder: SortOrder!
     createdAt: String!
@@ -232,6 +234,7 @@ export const typeDefs = gql`
     date: String
     passphrase: String
     status: GalleryStatus = DRAFT
+    lightboxMode: LightboxMode = BLACK # ✅ NEW
   }
 
   input UpdateGalleryInput {
@@ -240,6 +243,7 @@ export const typeDefs = gql`
     date: String
     passphrase: String
     status: GalleryStatus
+    lightboxMode: LightboxMode # ✅ NEW
   }
 
   input CreatePhotoInput {
@@ -266,14 +270,12 @@ export const typeDefs = gql`
 
   input CreateAppSettingInput {
     applicationName: String!
-    lightboxMode: LightboxMode!
     defaultDateFormat: DateFormat!
     defaultSortOrder: SortOrder!
   }
 
   input UpdateAppSettingInput {
     applicationName: String
-    lightboxMode: LightboxMode
     defaultDateFormat: DateFormat
     defaultSortOrder: SortOrder
   }

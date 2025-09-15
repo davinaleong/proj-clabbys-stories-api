@@ -238,6 +238,7 @@ export const resolvers = {
           date: normalizedDate,
           passphraseHash,
           status: status || "DRAFT",
+          lightboxMode: lightboxMode || "BLACK",
         },
       })
     },
@@ -257,6 +258,13 @@ export const resolvers = {
         updateData.status = GalleryStatus[data.status]
       }
 
+      if (data.lightboxMode) {
+        if (!Object.keys(LightboxMode).includes(data.lightboxMode)) {
+          throw new Error(`Invalid lightbox mode: ${data.lightboxMode}`)
+        }
+        updateData.lightboxMode = data.lightboxMode
+      }
+
       if (data.date) {
         const parsed = new Date(data.date)
         if (isNaN(parsed)) {
@@ -270,7 +278,6 @@ export const resolvers = {
         delete updateData.passphrase
       }
 
-      // FIX: update.where must be unique-only
       return prisma.gallery.update({
         where: { id },
         data: updateData,
