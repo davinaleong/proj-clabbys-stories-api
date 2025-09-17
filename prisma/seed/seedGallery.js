@@ -12,6 +12,7 @@ export async function seedGallery(prisma, user) {
       description: "Demo gallery with placeholder Cloudinary images",
       passphraseHash,
       status: "PUBLISHED",
+      lightboxMode: "BLACK",
       user: {
         connect: { id: user.id },
       },

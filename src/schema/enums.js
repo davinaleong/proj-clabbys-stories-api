@@ -7,6 +7,7 @@ export const GalleryStatus = {
 export const LightboxMode = {
   BLACK: "BLACK",
   BLURRED: "BLURRED",
+  SLIDESHOW: "SLIDESHOW",
 }
 
 export const SortOrder = {

@@ -214,6 +214,7 @@ export const resolvers = {
           date: normalizedDate,
           passphraseHash,
           status: status || "DRAFT",
+          lightboxMode: lightboxMode || "BLACK",
         },
       })
     },
@@ -233,6 +234,13 @@ export const resolvers = {
         updateData.status = GalleryStatus[data.status]
       }
 
+      if (data.lightboxMode) {
+        if (!Object.keys(LightboxMode).includes(data.lightboxMode)) {
+          throw new Error(`Invalid lightbox mode: ${data.lightboxMode}`)
+        }
+        updateData.lightboxMode = data.lightboxMode
+      }
+
       if (data.date) {
         const parsed = new Date(data.date)
         if (isNaN(parsed))
@@ -245,7 +253,10 @@ export const resolvers = {
         delete updateData.passphrase
       }
 
-      return prisma.gallery.update({ where: { id }, data: updateData })
+      return prisma.gallery.update({
+        where: { id },
+        data: updateData,
+      })
     },
 
     archiveGallery: async (_, { id }, { prisma }) => {
@@ -317,6 +328,44 @@ export const resolvers = {
         expiresIn: "7d",
       })
       return { token, gallery }
+    },
+
+    verifyGalleryPin: async (_, { id, pin }, { prisma }) => {
+      try {
+        // find only non-archived galleries
+        const gallery = await prisma.gallery.findFirst({
+          where: { id, deletedAt: null },
+        })
+
+        if (!gallery) {
+          return { ok: false, token: null, message: "Gallery not found." }
+        }
+
+        if (!gallery.passphraseHash) {
+          return {
+            ok: false,
+            token: null,
+            message: "This gallery does not require a passphrase.",
+          }
+        }
+
+        const isValid = await bcrypt.compare(pin, gallery.passphraseHash)
+        if (!isValid) {
+          return { ok: false, token: null, message: "Invalid passphrase." }
+        }
+
+        // issue short-lived token for gallery access
+        const token = jwt.sign(
+          { galleryId: gallery.id, scope: "gallery" },
+          env.JWT_SECRET,
+          { expiresIn: "2h" }
+        )
+
+        return { ok: true, token, message: "Access granted." }
+      } catch (err) {
+        console.error("verifyGalleryPin error:", err)
+        return { ok: false, token: null, message: "Unexpected error occurred." }
+      }
     },
 
     createPhoto: async (_, { data }, { prisma }) => {
@@ -561,8 +610,20 @@ export const resolvers = {
         where: { galleryId: parent.id },
         orderBy: { position: "asc" },
       }),
-    // Make sure your GraphQL schema includes `isLocked: Boolean!`
+
     isLocked: (parent) => Boolean(parent.passphraseHash),
+
+    hasPassphrase: async (parent, _, { prisma }) => {
+      // If parent came from a selection that already included passphraseHash (it shouldn't), avoid leaking:
+      if (Object.prototype.hasOwnProperty.call(parent, "passphraseHash")) {
+        return !!parent.passphraseHash
+      }
+      const row = await prisma.gallery.findUnique({
+        where: { id: parent.id },
+        select: { passphraseHash: true },
+      })
+      return !!row?.passphraseHash
+    },
   },
 
   Photo: {
