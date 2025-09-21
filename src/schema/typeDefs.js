@@ -181,6 +181,7 @@ export const typeDefs = gql`
     lightboxMode: LightboxMode! # ✅ NEW
     hasPassphrase: Boolean!
     photos: [Photo!]
+    spotifyPlaylist: String
     createdAt: String
     updatedAt: String
     deletedAt: String
@@ -235,6 +236,7 @@ export const typeDefs = gql`
     passphrase: String
     status: GalleryStatus = DRAFT
     lightboxMode: LightboxMode = BLACK # ✅ NEW
+    spotifyPlaylist: String
   }
 
   input UpdateGalleryInput {
@@ -244,6 +246,7 @@ export const typeDefs = gql`
     passphrase: String
     status: GalleryStatus
     lightboxMode: LightboxMode # ✅ NEW
+    spotifyPlaylist: String
   }
 
   input CreatePhotoInput {
