@@ -246,7 +246,7 @@ export const resolvers = {
           passphraseHash,
           status: status || "DRAFT",
           lightboxMode: lightboxMode || "BLACK",
-          spotifyPlaylistUrl, // ✅ NEW
+          spotifyPlaylistUrl,
         },
       })
     },
