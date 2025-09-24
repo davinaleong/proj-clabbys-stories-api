@@ -62,19 +62,19 @@ model User {
 }
 
 model Gallery {
-  id             String         @id @default(uuid())
-  title          String
-  description    String?
-  date           DateTime?
-  passphraseHash String?        // Optional password for guest access
-  status         GalleryStatus  @default(DRAFT)
-  photos         Photo[]
-  lightboxMode   LightboxMode   @default(BLACK)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  deletedAt      DateTime?      // Soft delete timestamp (null means active)
+  id                 String   @id @default(uuid())
+  title              String
+  description        String?
+  date               DateTime?
+  status             String   @default("DRAFT")
+  lightboxMode       String   @default("BLACK")
+  passphraseHash     String?
+  spotifyPlaylistUrl String?   // ✅ new
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  deletedAt          DateTime?
+  photos             Photo[]
 }
-
 
 model Photo {
   id          String    @id @default(uuid())

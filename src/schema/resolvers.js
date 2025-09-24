@@ -197,11 +197,19 @@ export const resolvers = {
     },
 
     createGallery: async (_, { data }, { prisma }) => {
-      const { title, description, date, passphrase, status } = data
+      const {
+        title,
+        description,
+        date,
+        passphrase,
+        status,
+        lightboxMode,
+        spotifyPlaylistUrl,
+      } = data
+
       const passphraseHash = passphrase
         ? await bcrypt.hash(passphrase, 10)
         : null
-
       const normalizedDate = date ? new Date(date) : null
       if (date && isNaN(normalizedDate)) {
         throw new Error("Invalid date format. Please use ISO 8601.")
@@ -215,6 +223,7 @@ export const resolvers = {
           passphraseHash,
           status: status || "DRAFT",
           lightboxMode: lightboxMode || "BLACK",
+          spotifyPlaylistUrl,
         },
       })
     },
@@ -226,20 +235,6 @@ export const resolvers = {
         throw new Error("Cannot update an archived gallery")
 
       const updateData = { ...data }
-
-      if (data.status) {
-        if (!Object.keys(GalleryStatus).includes(data.status)) {
-          throw new Error(`Invalid status: ${data.status}`)
-        }
-        updateData.status = GalleryStatus[data.status]
-      }
-
-      if (data.lightboxMode) {
-        if (!Object.keys(LightboxMode).includes(data.lightboxMode)) {
-          throw new Error(`Invalid lightbox mode: ${data.lightboxMode}`)
-        }
-        updateData.lightboxMode = data.lightboxMode
-      }
 
       if (data.date) {
         const parsed = new Date(data.date)
@@ -255,7 +250,7 @@ export const resolvers = {
 
       return prisma.gallery.update({
         where: { id },
-        data: updateData,
+        data: updateData, // includes spotifyPlaylistUrl if present
       })
     },
 
